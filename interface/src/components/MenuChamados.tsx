@@ -69,7 +69,7 @@ export function MenuChamados({
                 type="button"
                 onClick={() =>
                   escolher(
-                    `Consulte no portal os chamados em aberto e os concluídos desde 00:00 de ${desde} (--dias ${dias}). Separe abertos e concluídos, com CNPJ, consultor e supervisor.`,
+                    `Consulte no portal os chamados em aberto e os concluídos desde 00:00 de ${desde} (--dias ${dias}). Separe abertos e concluídos, com CNPJ, consultor e supervisor; nos concluídos, traga a resposta do Santander.`,
                   )
                 }
                 className="rounded-full bg-azul px-3 py-1 text-[12px] font-medium text-white hover:brightness-110"

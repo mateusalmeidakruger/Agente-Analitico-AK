@@ -184,7 +184,8 @@ def test_excluir_duas_vezes_o_mesmo_id_nao_sobrescreve(cfg):
 
 def _consulta(cfg, gerado="24/11/2026 16:14", desde="22/11/2026"):
     chamados_ = [
-        {"chamado": "#A", "cnpj": "35643897000156", "status": "Concluído", "conclusao": "24/11/2026 12:35"},
+        {"chamado": "#A", "cnpj": "35643897000156", "status": "Concluído", "conclusao": "24/11/2026 12:35",
+         "resposta_final": {"parecer": "Proposta resetada", "causa_raiz": "Erro sistêmico", "sla_atuacao": "."}},
         {"chamado": "#B", "cnpj": "69469815000110", "status": "Concluído", "conclusao": "22/11/2026 00:10"},
         {"chamado": "#C", "cnpj": "01694030000108", "status": "Em andamento", "conclusao": None},
     ]
@@ -234,3 +235,18 @@ def test_script_de_consulta_monta_saida_na_pasta_do_agente():
     assert comando[comando.index("--saida") + 1].endswith(r"consulta_chamados\ultima_consulta.json")
     with pytest.raises(scripts.ErroScript):
         scripts.montar_comando(c, "chamados_consultar", {"--dias": "61"})
+
+
+def test_portal_traz_resposta_dos_concluidos_sem_campos_vazios(cfg):
+    _consulta(cfg)
+    r = chamados.consultar_portal(cfg, cnpj="35643897000156", hoje=HOJE)
+    assert r["chamados"][0]["resposta_final"] == {"parecer": "Proposta resetada", "causa_raiz": "Erro sistêmico"}
+    assert r["totais"]["concluidos_com_resposta"] == 1
+
+
+def test_portal_consulta_da_versao_antiga_pede_para_rodar(cfg):
+    arq = cfg.dados / "consulta_chamados" / "ultima_consulta.json"
+    arq.write_text(json.dumps({"gerado_em": "24/11/2026 16:20", "filtro": {"concluidos_desde": "22/11/2026"},
+                               "chamados": [{"chamado": "#X", "status": "Concluído"}]}), encoding="utf-8")
+    r = chamados.consultar_portal(cfg, hoje=HOJE)
+    assert r["precisa_rodar"] and "versão antiga" in r["motivo"]

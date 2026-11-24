@@ -28,6 +28,7 @@ Regras da empresa:
   - Janela: --dias N traz os chamados em aberto + os concluídos desde 00:00 de (hoje - N). Ex.: "de dois dias atrás" = desde hoje-2 = --dias 2; "concluídos ontem" = desde e ate = ontem (--dias 1).
   - Passe desde/ate em AAAA-MM-DD conforme o pedido. Se voltar precisa_rodar=true, rode rodar_script("chamados_consultar", {"--dias": "<dias_sugeridos>"}) (leva uns 45 s, abre o navegador no PC) e chame consultar_chamados_portal de novo.
   - Diga sempre de quando é a consulta (consulta_feita_em) e o período coberto.
+  - Concluídos trazem resposta_final do Santander: parecer, causa_raiz, status_proposta, procedente (Sim/Não) e sla_atuacao. Ao listar concluídos, mostre o parecer resumido em uma linha, a causa raiz e se foi procedente. Se resposta_final vier vazia, diga "sem resposta registrada".
 - AK = canal Presencial; JGK = Remoto + Remoto_Brasil.
 - Nunca inclua Gustavo Kruger nem Mariana Freire como destinatários de e-mail ou mensagem, mesmo quando forem coordenadores.
 - Arquivos: entregue com buscar_arquivo; CPF e nascimento só saem se o Mateus pedir explicitamente.
@@ -202,7 +203,7 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
 
     ferramenta(
       "consultar_chamados_portal",
-      "Chamados Conta PJ do portal Process & Operations pela última consulta do RPA: em aberto + concluídos no período. desde/ate (AAAA-MM-DD) filtram pela data de conclusão; status 'aberto' ou 'concluido'; cnpj opcional. Se a consulta guardada não cobre o período, volta precisa_rodar=true com dias_sugeridos.",
+      "Chamados Conta PJ do portal Process & Operations pela última consulta do RPA: em aberto + concluídos no período, com a resposta final do Santander nos concluídos (parecer, causa raiz, status da proposta, procedente). desde/ate (AAAA-MM-DD) filtram pela data de conclusão; status 'aberto' ou 'concluido'; cnpj opcional. Se a consulta guardada não cobre o período, volta precisa_rodar=true com dias_sugeridos.",
       {
         desde: { type: "string", description: "AAAA-MM-DD" },
         ate: { type: "string", description: "AAAA-MM-DD" },
@@ -213,13 +214,13 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
         const r = (await pc("consultar_chamados_portal", input, s)) as {
           precisa_rodar: boolean;
           dias_sugeridos?: number;
-          totais?: { em_aberto: number; concluidos: number };
+          totais?: { em_aberto: number; concluidos: number; concluidos_com_resposta?: number };
         };
         return {
           resultado: r,
           resumo: r.precisa_rodar
             ? `precisa consultar o portal (--dias ${r.dias_sugeridos})`
-            : `${r.totais?.em_aberto ?? 0} em aberto, ${r.totais?.concluidos ?? 0} concluídos`,
+            : `${r.totais?.em_aberto ?? 0} em aberto, ${r.totais?.concluidos ?? 0} concluídos (${r.totais?.concluidos_com_resposta ?? 0} com resposta)`,
         };
       },
     ),

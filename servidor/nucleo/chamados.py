@@ -145,6 +145,9 @@ def consultar_portal(cfg, desde=None, ate=None, cnpj=None, status=None, hoje=Non
     if gerado.date() < hoje:
         return rodar(max(dias_para_desde, (hoje - cobre_desde).days),
                      f"a última consulta é de {gerado:%d/%m %H:%M}, não de hoje")
+    if dados["chamados"] and not any("resposta_final" in c for c in dados["chamados"]):
+        return rodar(max(dias_para_desde, (hoje - cobre_desde).days),
+                     "a última consulta é da versão antiga do RPA, sem a resposta dos concluídos")
 
     alvo = re.sub(r"\D", "", cnpj or "")
     linhas = []
@@ -158,7 +161,7 @@ def consultar_portal(cfg, desde=None, ate=None, cnpj=None, status=None, hoje=Non
             dia = _data_br(c.get("conclusao") or c.get("ultima_atualizacao"))
             if desde_d and dia and dia < desde_d or ate_d and dia and dia > ate_d:
                 continue
-        linhas.append({**c, "descricao": (c.get("descricao") or "")[:300]})
+        linhas.append(_compacto(c))
 
     abertos = sum(not str(c.get("status") or "").lower().startswith("conclu") for c in linhas)
     return {
@@ -166,7 +169,30 @@ def consultar_portal(cfg, desde=None, ate=None, cnpj=None, status=None, hoje=Non
         "consulta_feita_em": f"{gerado:%d/%m/%Y %H:%M}",
         "cobre_concluidos_desde": f"{cobre_desde:%d/%m/%Y}",
         "filtro_aplicado": {"desde": desde, "ate": ate, "cnpj": alvo or None, "status": status},
-        "totais": {"em_aberto": abertos, "concluidos": len(linhas) - abertos},
+        "totais": {"em_aberto": abertos, "concluidos": len(linhas) - abertos,
+                   "concluidos_com_resposta": sum(bool(c.get("resposta_final")) for c in linhas)},
         "chamados": linhas,
         "regra_janela": "--dias N = em aberto + concluídos desde 00:00 de (hoje - N)",
+    }
+
+
+def _compacto(c):
+    """Só o que o chat usa, com textos longos cortados: a semana inteira cabe no limite da ferramenta."""
+    resp = c.get("resposta_final")
+    if resp:
+        resp = {k: (v[:400] if isinstance(v, str) else v) for k, v in resp.items() if v not in (None, "", ".")}
+    return {
+        "chamado": c.get("chamado"),
+        "cnpj": c.get("cnpj"),
+        "status": c.get("status"),
+        "etapa_atual": c.get("etapa_atual"),
+        "abertura": c.get("abertura"),
+        "conclusao": c.get("conclusao"),
+        "responsavel": c.get("responsavel"),
+        "escopo": c.get("escopo"),
+        "descricao": (c.get("descricao") or "")[:200],
+        "resposta_final": resp or None,
+        "gerente": c.get("gerente"),
+        "consultor": c.get("consultor"),
+        "supervisor": c.get("supervisor"),
     }
