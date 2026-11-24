@@ -114,7 +114,7 @@ export default function App() {
     (async () => {
       const [s, m, d] = await Promise.all([usar<Sample>("sample"), usar<Mcp>("mcp"), usar<Downloads>("downloads")]);
       if (!vivo) return;
-      setSample(s);
+      setSample(() => s); // função no setState seria executada pelo React
       setMcp(m);
       setDownloads(d);
       setSemClaude(!s);
