@@ -21,8 +21,8 @@
   --amarelo: #b26a00;
   --vermelho: #d70015;
   --sombra: 0 24px 60px rgba(16, 24, 40, 0.16), 0 2px 8px rgba(16, 24, 40, 0.08);
-  --fonte: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", sans-serif;
-  --fonte-mono: "JetBrains Mono", "SF Mono", ui-monospace, Consolas, monospace;
+  --fonte: "Roboto", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  --fonte-mono: "Roboto Mono", "SF Mono", ui-monospace, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: dark) {

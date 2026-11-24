@@ -39,3 +39,46 @@ export type StatusBase = {
   laudo: { arquivo: string | null; data: string | null; status: string | null };
   auditoria: { arquivo: string | null; data: string | null; veredito: string | null };
 };
+
+export type EmailResumo = {
+  id: string;
+  uri: string;
+  assunto: string;
+  remetente: string;
+  email_remetente: string;
+  recebido: string;
+  resumo: string;
+  lido: boolean;
+  importante: boolean;
+  anexos: boolean;
+  link: string;
+};
+
+export type EventoAgenda = { assunto: string; inicio: string; fim: string; fuso: string; local: string; organizador: string; link: string };
+
+export type DiaSemana = "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
+
+export type Rotina = {
+  id?: string;
+  nome: string;
+  pedido: string;
+  hora: string;
+  dias: DiaSemana[];
+  ativa: boolean;
+  ultima_execucao?: string | null;
+};
+
+export type TarefaPc = {
+  nome: string;
+  habilitada: boolean;
+  status: string;
+  proxima_execucao: string | null;
+  ultima_execucao: string | null;
+  ultimo_resultado: string;
+  ok: boolean;
+  descricao: string | null;
+};
+
+export type Notificacao =
+  | { tipo: "email"; id: string; quando: string; email: EmailResumo }
+  | { tipo: "rotina"; id: string; quando: string; rotina: Rotina };

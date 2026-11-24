@@ -1,6 +1,7 @@
 // O agente: regras, ferramentas (servidor ak_local no PC + planilha de chamados pelo
 // Microsoft 365) e o ciclo de uma resposta com o Claude do próprio plano (capability sample).
 import { codigoErro, type FerramentaPagina, type Mcp, type Sample } from "./claude";
+import { agenda, buscarEmails, buscarPessoa, lerEmail } from "./outlook";
 import type { Anexo, Mensagem, UsoFerramenta } from "./tipos";
 
 export const HOST = "host:ak_local";
@@ -20,6 +21,8 @@ Como responder:
 - Diga sempre a data e o arquivo de onde veio o número (ex.: "Parcial2 de 24/11").
 - Nunca invente número. Se nenhuma ferramenta traz o dado, diga que essa análise ainda não está disponível no agente.
 - Análises de zerados, projeção do mês, constância e destaques AINDA NÃO têm ferramenta: diga que estão em construção.
+- Outlook (SÓ LEITURA): buscar_emails, ler_email, agenda_outlook e buscar_pessoa. Você NÃO envia, não responde e não apaga e-mail; se pedirem, diga que o agente só lê o Outlook. Ao citar um e-mail, diga remetente, assunto e quando chegou. Para o conteúdo completo, use ler_email com a uri.
+- Agendamentos: listar_rotinas traz as rotinas cadastradas pelo Mateus (aba Agendamentos); tarefas_do_pc traz as tarefas AK do Agendador do Windows (última/próxima execução e se deu certo). Para criar ou mudar rotina, oriente o Mateus a usar a aba Agendamentos.
 - Pontos críticos: use pontos_criticos (filtre por coordenador ou supervisor quando o pedido for de uma equipe). Responda nesta ordem:
   1. Uma linha com o resumo (equipes críticas de quantas, consultores críticos de quantos ativos) e a base usada (base_ate).
   2. Tabela das equipes críticas: supervisor, coordenador, ativos, pontos por ativo × média da coordenação, críticos/elegíveis (%), e qual sinal disparou (pontos por ativo, % de críticos ou os dois).
@@ -245,6 +248,74 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
         };
       },
     ),
+
+    ferramenta(
+      "buscar_emails",
+      "Busca e-mails no Outlook do Mateus (só leitura). Filtros: query (texto no assunto/corpo/anexo), sender (e-mail ou nome completo), afterDateTime/beforeDateTime (ISO ou 'yesterday', 'today'), folderName. Sem filtros, traz os mais recentes da caixa de entrada.",
+      {
+        query: { type: "string" },
+        sender: { type: "string" },
+        afterDateTime: { type: "string" },
+        beforeDateTime: { type: "string" },
+        folderName: { type: "string" },
+      },
+      async (input, s) => {
+        const r = await buscarEmails(mcp as Mcp, input, s).catch((e) => {
+          throw new Error(`Outlook: ${mensagemErro(e)}`);
+        });
+        return { resultado: r, resumo: `${r.length} e-mail(s)` };
+      },
+    ),
+
+    ferramenta(
+      "ler_email",
+      "Lê o conteúdo completo de um e-mail pela uri (mail:///...) vinda de buscar_emails.",
+      { uri: { type: "string" } },
+      async (input, s) => {
+        const t = await lerEmail(mcp as Mcp, String(input.uri), s).catch((e) => {
+          throw new Error(`Outlook: ${mensagemErro(e)}`);
+        });
+        return { resultado: t, resumo: "e-mail lido" };
+      },
+      ["uri"],
+    ),
+
+    ferramenta(
+      "agenda_outlook",
+      "Compromissos do calendário do Outlook entre duas datas (AAAA-MM-DD). Sem datas, traz o dia de hoje.",
+      { de: { type: "string" }, ate: { type: "string" } },
+      async (input, s) => {
+        const de = input.de ? new Date(`${input.de}T00:00:00`) : new Date(new Date().setHours(0, 0, 0, 0));
+        const ate = input.ate ? new Date(`${input.ate}T23:59:59`) : new Date(de.getTime() + 86_400_000);
+        const r = await agenda(mcp as Mcp, de, ate, s).catch((e) => {
+          throw new Error(`Outlook: ${mensagemErro(e)}`);
+        });
+        return { resultado: r, resumo: `${r.length} compromisso(s)` };
+      },
+    ),
+
+    ferramenta(
+      "buscar_pessoa",
+      "Acha nome, e-mail e cargo de alguém da empresa pelo nome ou parte do e-mail (diretório do Microsoft 365).",
+      { nome: { type: "string" } },
+      async (input, s) => {
+        const r = await buscarPessoa(mcp as Mcp, String(input.nome), s).catch((e) => {
+          throw new Error(`Diretório: ${mensagemErro(e)}`);
+        });
+        return { resultado: r, resumo: `${r.length} pessoa(s)` };
+      },
+      ["nome"],
+    ),
+
+    ferramenta("listar_rotinas", "Rotinas da aba Agendamentos: nome, dias, hora, pedido, ativa e última execução.", {}, async (_i, s) => {
+      const r = comoLista(await pc("listar_rotinas", {}, s));
+      return { resultado: r, resumo: `${r.length} rotina(s)` };
+    }),
+
+    ferramenta("tarefas_do_pc", "Tarefas AK do Agendador do Windows: última e próxima execução e se o último resultado foi ok.", {}, async (_i, s) => {
+      const r = comoLista<{ ok: boolean }>(await pc("tarefas_do_pc", {}, s));
+      return { resultado: r, resumo: `${r.length} tarefa(s), ${r.filter((t) => !t.ok).length} com erro` };
+    }),
 
     ferramenta("listar_scripts", "Scripts liberados, com nível (1 leitura, 2 gera arquivo, 3 ação externa) e opções aceitas.", {}, async (_i, s) => {
       const r = comoLista(await pc("listar_scripts", {}, s));

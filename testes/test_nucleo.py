@@ -301,3 +301,36 @@ def test_pontos_criticos_regras(cfg_producao):
 def test_pontos_criticos_filtro_sem_resultado(cfg_producao):
     with pytest.raises(Exception, match="nenhuma equipe"):
         analises.pontos_criticos(cfg_producao, coordenador="NINGUEM", hoje=HOJE)
+
+
+# ---------- rotinas ----------
+
+from nucleo import rotinas  # noqa: E402
+
+
+def test_rotina_cria_edita_marca_e_apaga(cfg):
+    r = rotinas.salvar(cfg, {"nome": "Chamados", "pedido": "Consulte o portal --dias 1", "hora": "10:00",
+                             "dias": ["sex", "seg", "xyz"]})
+    assert r["dias"] == ["seg", "sex"] and r["ativa"] and r["ultima_execucao"] is None
+    r2 = rotinas.salvar(cfg, {**r, "hora": "11:30", "ativa": False})
+    assert r2["id"] == r["id"] and r2["hora"] == "11:30" and not r2["ativa"]
+    assert rotinas.marcar_executada(cfg, r["id"])["ultima_execucao"]
+    assert len(rotinas.listar(cfg)) == 1
+    rotinas.apagar(cfg, r["id"])
+    assert rotinas.listar(cfg) == []
+
+
+@pytest.mark.parametrize("ruim", [
+    {"nome": "", "pedido": "x", "hora": "10:00", "dias": ["seg"]},
+    {"nome": "a", "pedido": "x", "hora": "25:00", "dias": ["seg"]},
+    {"nome": "a", "pedido": "x", "hora": "10:00", "dias": []},
+])
+def test_rotina_invalida_e_recusada(cfg, ruim):
+    with pytest.raises(rotinas.ErroAgente):
+        rotinas.salvar(cfg, ruim)
+
+
+def test_tarefas_do_pc_le_o_agendador():
+    tarefas = rotinas.tarefas_do_pc()
+    assert isinstance(tarefas, list)
+    assert all(t["nome"].startswith("AK") for t in tarefas)

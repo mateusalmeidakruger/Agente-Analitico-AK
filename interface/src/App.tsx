@@ -1,5 +1,6 @@
 import {
   IconAlertOctagon,
+  IconCalendarTime,
   IconChartLine,
   IconFolder,
   IconPlayerStopFilled,
@@ -16,6 +17,8 @@ import { BarraLateral } from "@/components/BarraLateral";
 import { BarraTitulo, type EstadoPc } from "@/components/BarraTitulo";
 import { Bolha } from "@/components/Mensagens";
 import { MenuChamados } from "@/components/MenuChamados";
+import { Notificacoes } from "@/components/Notificacoes";
+import { PainelAgendamentos } from "@/components/PainelAgendamentos";
 import { AnimatedModal } from "@/components/ui/animated-modal";
 import { FloatingDock } from "@/components/ui/floating-dock";
 import { MultiStepLoader } from "@/components/ui/multi-step-loader";
@@ -23,7 +26,20 @@ import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-van
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
 import { chamarPc, comoLista, responder } from "@/lib/agente";
 import { codigoErro, type Downloads, type Mcp, type Sample, usar } from "@/lib/claude";
-import type { Anexo, Conversa, Mensagem, ResumoConversa, StatusBase, UsoFerramenta } from "@/lib/tipos";
+import { agenda, emailsDesde, hojeIntervalo } from "@/lib/outlook";
+import type {
+  Anexo,
+  Conversa,
+  EmailResumo,
+  EventoAgenda,
+  Mensagem,
+  Notificacao,
+  ResumoConversa,
+  Rotina,
+  StatusBase,
+  TarefaPc,
+  UsoFerramenta,
+} from "@/lib/tipos";
 import { cn } from "@/lib/utils";
 
 const SUGESTOES = [
@@ -282,6 +298,203 @@ export default function App() {
   const preencherCaixa = (texto: string) => setPreencher({ texto, n: Date.now() });
   const [menuChamados, setMenuChamados] = useState(false);
 
+  // ---------- notificações: e-mails novos (Outlook) e rotinas na hora ----------
+  const lerLocal = (k: string) => {
+    try {
+      return localStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  };
+  const gravarLocal = (k: string, v: string) => {
+    try {
+      localStorage.setItem(k, v);
+    } catch {
+      /* sem armazenamento: só não lembra */
+    }
+  };
+  const [sinoAberto, setSinoAberto] = useState(false);
+  const [emails, setEmails] = useState<EmailResumo[]>([]);
+  const [vistoAte, setVistoAte] = useState(() => lerLocal("ak-notif-visto") ?? new Date(Date.now() - 8 * 3_600_000).toISOString());
+  const [semOutlook, setSemOutlook] = useState<string | null>(null);
+  const [rotinas, setRotinas] = useState<Rotina[]>([]);
+  const [devidas, setDevidas] = useState<Rotina[]>([]);
+  const [painel, setPainel] = useState(false);
+  const [tarefas, setTarefas] = useState<TarefaPc[] | null>(null);
+  const [erroPc, setErroPc] = useState<string | null>(null);
+  const [eventos, setEventos] = useState<EventoAgenda[] | null>(null);
+  const [erroOutlook, setErroOutlook] = useState<string | null>(null);
+  const ultimoEmail = useRef<string>(vistoAte);
+
+  // e-mails: primeira leitura desde a última vez que o sino foi aberto, depois a cada minuto
+  useEffect(() => {
+    if (!mcp) return;
+    let vivo = true;
+    const buscar = async () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const novos = await emailsDesde(mcp, ultimoEmail.current);
+        if (!vivo) return;
+        setSemOutlook(null);
+        if (novos.length) {
+          ultimoEmail.current = novos.reduce((m, e) => (e.recebido > m ? e.recebido : m), ultimoEmail.current);
+          setEmails((atual) => {
+            const ids = new Set(atual.map((e) => e.id));
+            return [...novos.filter((e) => !ids.has(e.id)), ...atual].slice(0, 50);
+          });
+        }
+      } catch (e) {
+        if (!vivo) return;
+        const c = codigoErro(e);
+        setSemOutlook(
+          c === "needs_reauth"
+            ? "Reconecte o Microsoft 365 em Configurações → Conectores para ver os e-mails."
+            : c === "not_in_manifest" || c === "approval_required"
+              ? "O acesso ao Outlook não foi liberado para o agente."
+              : "Não consegui olhar o Outlook agora; tento de novo em 1 minuto.",
+        );
+      }
+    };
+    void buscar();
+    const t = window.setInterval(buscar, 60_000);
+    return () => {
+      vivo = false;
+      clearInterval(t);
+    };
+  }, [mcp]);
+
+  const carregarRotinas = useCallback(async () => {
+    if (!mcp || pc !== "conectado") return;
+    try {
+      setRotinas(comoLista<Rotina>(await chamarPc(mcp, "listar_rotinas")));
+    } catch {
+      /* a lista antiga continua */
+    }
+  }, [mcp, pc]);
+
+  useEffect(() => {
+    void carregarRotinas();
+  }, [carregarRotinas]);
+
+  // rotinas: confere a cada 30 s quais já passaram da hora hoje e ainda não rodaram
+  useEffect(() => {
+    const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"] as const;
+    const conferir = () => {
+      const agoraD = new Date();
+      const hoje = agoraD.toLocaleDateString("sv-SE");
+      const hhmm = agoraD.toTimeString().slice(0, 5);
+      setDevidas(
+        rotinas.filter(
+          (r) =>
+            r.ativa &&
+            r.dias.includes(DIAS[agoraD.getDay()]) &&
+            r.hora <= hhmm &&
+            !(r.ultima_execucao ?? "").startsWith(hoje) &&
+            lerLocal(`ak-rotina-dispensada-${r.id}`) !== hoje,
+        ),
+      );
+    };
+    conferir();
+    const t = window.setInterval(conferir, 30_000);
+    return () => clearInterval(t);
+  }, [rotinas]);
+
+  const notificacoes: Notificacao[] = [
+    ...devidas.map((r) => ({ tipo: "rotina" as const, id: `r-${r.id}`, quando: new Date().toISOString(), rotina: r })),
+    ...emails.map((e) => ({ tipo: "email" as const, id: `e-${e.id}`, quando: e.recebido, email: e })),
+  ];
+  const naoLidas = devidas.length + emails.filter((e) => e.recebido > vistoAte).length;
+
+  const alternarSino = useCallback((aberto: boolean) => {
+    setSinoAberto(aberto);
+    if (aberto) {
+      const agoraIso = new Date().toISOString();
+      setVistoAte(agoraIso);
+      gravarLocal("ak-notif-visto", agoraIso);
+    }
+  }, []);
+
+  const executarRotina = async (r: Rotina) => {
+    setSinoAberto(false);
+    setPainel(false);
+    if (ocupado) {
+      setAviso("O agente está respondendo; execute a rotina quando ele terminar.");
+      return;
+    }
+    if (mcp && r.id) {
+      try {
+        await chamarPc(mcp, "marcar_rotina_executada", { id: r.id });
+      } catch {
+        /* roda mesmo assim; só pode avisar de novo hoje */
+      }
+      void carregarRotinas();
+    }
+    void enviar(`[Rotina: ${r.nome}] ${r.pedido}`);
+  };
+
+  const dispensarRotina = (r: Rotina) => {
+    gravarLocal(`ak-rotina-dispensada-${r.id}`, new Date().toLocaleDateString("sv-SE"));
+    setDevidas((d) => d.filter((x) => x.id !== r.id));
+  };
+
+  const salvarRotina = async (r: Rotina) => {
+    if (!mcp) return false;
+    try {
+      await chamarPc(mcp, "salvar_rotina", { rotina: r });
+      await carregarRotinas();
+      return true;
+    } catch (e) {
+      const msg = typeof e === "object" && e && "message" in e ? String((e as { message: string }).message) : "";
+      setAviso(codigoErro(e) === "cancelled" ? "Gravação da rotina cancelada no app." : `Não consegui salvar a rotina. ${msg.replace(/^Error executing tool \w+: /, "")}`);
+      return false;
+    }
+  };
+
+  const apagarRotina = async (r: Rotina) => {
+    if (!mcp || !r.id) return;
+    try {
+      await chamarPc(mcp, "apagar_rotina", { id: r.id });
+      await carregarRotinas();
+    } catch {
+      setAviso("Não consegui excluir a rotina.");
+    }
+  };
+
+  const carregarPainel = useCallback(async () => {
+    if (!mcp) return;
+    setTarefas(null);
+    setEventos(null);
+    void carregarRotinas();
+    chamarPc(mcp, "tarefas_do_pc").then(
+      (r) => {
+        setTarefas(comoLista<TarefaPc>(r));
+        setErroPc(null);
+      },
+      () => setErroPc("Não consegui ler o Agendador do Windows (o PC está conectado?)."),
+    );
+    const [de, ate] = hojeIntervalo();
+    agenda(mcp, de, ate).then(
+      (r) => {
+        setEventos(r);
+        setErroOutlook(null);
+      },
+      (e) => setErroOutlook(codigoErro(e) === "needs_reauth" ? "Reconecte o Microsoft 365 para ver a agenda." : "Não consegui ler a agenda do Outlook."),
+    );
+  }, [mcp, carregarRotinas]);
+
+  const abrirPainel = () => {
+    setSinoAberto(false);
+    setPainel(true);
+    void carregarPainel();
+  };
+
+  const resumirEmail = (e: EmailResumo) => {
+    setSinoAberto(false);
+    void enviar(
+      `Resuma este e-mail em poucas linhas e diga se ele pede alguma ação minha. De: ${e.remetente} <${e.email_remetente}>; assunto: "${e.assunto}"; recebido em ${new Date(e.recebido).toLocaleString("pt-BR")}. uri: ${e.uri}`,
+    );
+  };
+
   const dock = [
     { titulo: "Nova conversa", icone: <IconPlus className="h-full w-full" stroke={1.8} />, aoClicar: nova },
     {
@@ -304,6 +517,7 @@ export default function App() {
       icone: <IconShieldCheck className="h-full w-full" stroke={1.6} />,
       aoClicar: () => preencherCaixa("A base de hoje foi liberada?"),
     },
+    { titulo: "Agendamentos", icone: <IconCalendarTime className="h-full w-full" stroke={1.6} />, aoClicar: () => abrirPainel() },
     {
       titulo: "Pontos críticos",
       icone: <IconAlertOctagon className="h-full w-full" stroke={1.6} />,
@@ -318,7 +532,26 @@ export default function App() {
   return (
     <div className="flex h-full items-stretch justify-center md:p-5">
       <div className="relative flex h-full w-full max-w-[1280px] flex-col overflow-hidden bg-janela md:rounded-xl md:border md:border-borda md:shadow-[var(--sombra)]">
-        <BarraTitulo base={base} pc={pc} aoAlternarLateral={() => setLateralAberta((a) => !a)} />
+        <BarraTitulo
+          base={base}
+          pc={pc}
+          aoAlternarLateral={() => setLateralAberta((a) => !a)}
+          extra={
+            mcp && (
+              <Notificacoes
+                aberto={sinoAberto}
+                aoAlternar={alternarSino}
+                itens={notificacoes}
+                naoLidas={naoLidas}
+                semOutlook={semOutlook}
+                aoResumirEmail={resumirEmail}
+                aoExecutarRotina={executarRotina}
+                aoDispensarRotina={dispensarRotina}
+                aoAbrirAgendamentos={abrirPainel}
+              />
+            )
+          }
+        />
 
         <div className="relative flex min-h-0 flex-1">
           <AnimatePresence initial={false}>
@@ -496,6 +729,20 @@ export default function App() {
           </div>
         )}
       </AnimatedModal>
+      <PainelAgendamentos
+        aberto={painel}
+        aoFechar={() => setPainel(false)}
+        rotinas={rotinas}
+        tarefas={tarefas}
+        eventos={eventos}
+        erroOutlook={erroOutlook}
+        erroPc={pc === "conectado" ? erroPc : "O PC não está conectado."}
+        aoSalvar={salvarRotina}
+        aoApagar={apagarRotina}
+        aoExecutar={executarRotina}
+        aoAtualizar={carregarPainel}
+      />
+
       <AnimatedModal aberto={excluir !== null} aoFechar={() => !excluir?.excluindo && setExcluir(null)}>
         {excluir && (
           <div className="flex flex-col gap-4 p-5">

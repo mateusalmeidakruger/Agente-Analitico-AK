@@ -1,4 +1,5 @@
 import { IconLayoutSidebar } from "@tabler/icons-react";
+import type { ReactNode } from "react";
 import { Avatar } from "@/components/Avatar";
 import type { StatusBase } from "@/lib/tipos";
 import { cn } from "@/lib/utils";
@@ -15,10 +16,12 @@ export function BarraTitulo({
   base,
   pc,
   aoAlternarLateral,
+  extra,
 }: {
   base: StatusBase | null;
   pc: EstadoPc;
   aoAlternarLateral: () => void;
+  extra?: ReactNode;
 }) {
   const pilulaBase = base
     ? base.liberada
@@ -49,6 +52,7 @@ export function BarraTitulo({
       </h1>
 
       <div className="ml-auto flex min-w-0 items-center gap-2">
+        {extra}
         {pilulaBase && (
           <span
             title={base?.aviso ?? `Laudo ${base?.laudo.arquivo ?? ""}`}

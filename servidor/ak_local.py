@@ -12,7 +12,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
-from nucleo import analises, arquivos, base_do_dia, chamados, conversas, scripts
+from nucleo import analises, arquivos, base_do_dia, chamados, conversas, rotinas, scripts
 from nucleo.config import Config
 from nucleo.erros import ErroAgente
 
@@ -158,6 +158,38 @@ def pontos_criticos(coordenador: str | None = None, supervisor: str | None = Non
     Filtros por parte do nome do coordenador ou do supervisor.
     """
     return _limpo(analises.pontos_criticos(cfg, coordenador, supervisor))
+
+
+# ---------- agendamentos ----------
+
+@ferramenta(leitura=True)
+def listar_rotinas() -> dict:
+    """Rotinas cadastradas pelo Mateus (aba Agendamentos): nome, dias, hora, pedido ao agente, ativa, última execução."""
+    return {"itens": rotinas.listar(cfg), "hoje": rotinas.hoje_semana()}
+
+
+@ferramenta(leitura=False)
+def salvar_rotina(rotina: dict) -> dict:
+    """Cria ou atualiza uma rotina: {id?, nome, pedido, hora "HH:MM", dias ["seg".."dom"], ativa}."""
+    return rotinas.salvar(cfg, rotina)
+
+
+@ferramenta(leitura=False)
+def apagar_rotina(id: str) -> str:
+    """Remove uma rotina da aba Agendamentos. Só quando o Mateus pedir."""
+    return rotinas.apagar(cfg, id)
+
+
+@ferramenta(leitura=False)
+def marcar_rotina_executada(id: str) -> dict:
+    """Registra que a rotina rodou hoje (para não avisar de novo no mesmo dia)."""
+    return rotinas.marcar_executada(cfg, id)
+
+
+@ferramenta(leitura=True)
+def tarefas_do_pc() -> dict:
+    """Tarefas AK do Agendador do Windows: última e próxima execução e se o último resultado foi ok."""
+    return {"itens": rotinas.tarefas_do_pc()}
 
 
 # ---------- scripts ----------

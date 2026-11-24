@@ -17,9 +17,11 @@ Fica em `servidor\`. O Artifact do chat (app desktop do Claude) chama estas ferr
 | `consultar_cnpj`, `contas_fora_do_sla` | Chamados do RPA + situação na Parcial2; fora do SLA = pendente há mais de 3 dias úteis desde a digitação (CANCELADO não conta) |
 | `consultar_chamados_portal` | Última consulta do RPA Consulta Chamados (em aberto + concluídos desde 00:00 de hoje - N); avisa quantos `--dias` rodar quando a consulta não cobre o período |
 | `pontos_criticos` | Produção do mês por equipe: consultor crítico < 50% da mediana do grupo (ativos com mais de 45 dias); equipe crítica = pontos por ativo < 70% da média da coordenação ou 30%+ de críticos |
+| `listar_rotinas`, `salvar_rotina`, `apagar_rotina`, `marcar_rotina_executada` | Rotinas da aba Agendamentos em `dadosgendamentos.json` (dias, hora, pedido ao agente); avisam no sino com o agente aberto |
+| `tarefas_do_pc` | Tarefas AK do Agendador do Windows (só leitura, `schtasks /query`) |
 | `listar_scripts`, `rodar_script` | Só o que está em `scripts.json`; nível 3 exige `confirmado=true` e começa desabilitado |
 
-A planilha ABERTURA DE CHAMADOS não passa pelo servidor: o Artifact lê pelo conector Microsoft 365.
+A planilha ABERTURA DE CHAMADOS e o Outlook (e-mails, agenda, diretório) não passam pelo servidor: o Artifact lê pelo conector Microsoft 365, que só tem permissão de leitura.
 
 ## Interface (Artifact)
 
