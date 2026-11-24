@@ -1,0 +1,39 @@
+{
+  "_leia": "Lista fechada de scripts que o agente pode rodar. nivel 1 = leitura, 2 = gera arquivo, 3 = ação externa (precisa de aval). Caminhos relativos a raiz_fluxo do config.json. {dados} vira a pasta dados do agente.",
+  "scripts": {
+    "validador": {
+      "descricao": "Valida a base do dia da Central\\Entrada e grava o laudo na pasta do agente (não mexe nos laudos oficiais)",
+      "caminho": "Central\\validador.py",
+      "nivel": 1,
+      "habilitado": true,
+      "timeout_s": 300,
+      "args_fixos": ["--saida", "{dados}\\validador"],
+      "args_opcoes": {
+        "--hoje": "^\\d{4}-\\d{2}-\\d{2}$"
+      }
+    },
+    "chamados_listar": {
+      "descricao": "Mostra quais CNPJs o RPA de chamados abriria hoje, sem abrir o navegador",
+      "caminho": "RPA Chamados SLA\\rpa_chamados.py",
+      "nivel": 1,
+      "habilitado": true,
+      "timeout_s": 300,
+      "args_fixos": ["--listar"],
+      "args_opcoes": {
+        "--cnpj": "^\\d{14}$"
+      }
+    },
+    "chamados_enviar": {
+      "descricao": "Abre de verdade o chamado de UM CNPJ no Process & Operations",
+      "caminho": "RPA Chamados SLA\\rpa_chamados.py",
+      "nivel": 3,
+      "habilitado": false,
+      "timeout_s": 600,
+      "args_fixos": ["--enviar"],
+      "args_obrigatorios": ["--cnpj"],
+      "args_opcoes": {
+        "--cnpj": "^\\d{14}$"
+      }
+    }
+  }
+}

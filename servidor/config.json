@@ -1,0 +1,58 @@
+{
+  "raiz_fluxo": "C:\\Users\\mateus.ferreira\\Documents\\Fluxo VBA Teste",
+  "python_scripts": "python",
+  "limite_entrega_mb": 10,
+  "sla_dias_uteis": 3,
+  "status_pendentes_sla": ["Aguardando Liberacao", "Em Analise"],
+  "status_ignorados_sla": ["CANCELADO"],
+  "feriados": [
+    "2026-01-01", "2026-02-16", "2026-02-17", "2026-04-03", "2026-04-21",
+    "2026-05-01", "2026-06-04", "2026-09-07", "2026-10-12", "2026-11-02",
+    "2026-11-20", "2026-12-25",
+    "2027-01-01", "2027-02-08", "2027-02-09", "2027-03-26", "2027-04-21",
+    "2027-05-01", "2027-05-27", "2027-09-07", "2027-10-12", "2027-11-02",
+    "2027-11-15", "2027-11-20", "2027-12-25"
+  ],
+  "laudos": "Central\\laudos",
+  "auditorias": "Central\\auditorias",
+  "chamados_rpa_csv": "RPA Chamados SLA\\chamados_abertos.csv",
+  "parcial2": "Central\\Entrada\\Parcial2.xlsx",
+  "arquivos": {
+    "usuarios_atual": {
+      "caminho": "Central\\Entrada\\Usuarios\\Usuarios_Atual.xlsx",
+      "descricao": "Usuarios_Atual: consultores, supervisores e coordenadores",
+      "colunas_sensiveis": ["CPF", "Data_Nascimento", "CPF_Supervisor", "Data_NascimentoSuper", "Cpf_Coordenador"]
+    },
+    "producao": {
+      "caminho": "Central\\Entrada\\Producao.xlsx",
+      "descricao": "Produção do ano (arquivo grande: peça com filtro)"
+    },
+    "producao_mes": {
+      "caminho": "Central\\Parcial\\Producao do Mes.xlsx",
+      "descricao": "Produção do mês, DataBase do dia 1 até hoje"
+    },
+    "parcial2": {
+      "caminho": "Central\\Entrada\\Parcial2.xlsx",
+      "descricao": "Parcial2: digitação dos últimos 60 dias"
+    },
+    "fve_ak": {
+      "caminho": "Central\\Entrada\\FVE AK.csv",
+      "descricao": "FVE AK: indicações do canal Presencial",
+      "csv_sep": ";"
+    },
+    "fve_jgk": {
+      "caminho": "Central\\Entrada\\FVE JGK.csv",
+      "descricao": "FVE JGK: indicações do canal Remoto",
+      "csv_sep": ";"
+    },
+    "pendentes_credenciamento": {
+      "caminho": "Central\\Entrada\\Contas_Pendentes_Credenciamento.xlsx",
+      "descricao": "Contas pendentes de credenciamento"
+    },
+    "chamados_rpa": {
+      "caminho": "RPA Chamados SLA\\chamados_abertos.csv",
+      "descricao": "Chamados abertos pelo robô (CSV do RPA Chamados SLA)",
+      "csv_sep": ";"
+    }
+  }
+}
