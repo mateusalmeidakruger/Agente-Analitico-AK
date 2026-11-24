@@ -18,7 +18,8 @@ export type Sample = ((
     cache?: boolean;
   },
 ) => Promise<{ text: string; truncated: boolean }>) & {
-  limits: () => Promise<{ maxPromptBytes: number; tools?: { maxCount: number } }>;
+  // ausente em apps mais antigos
+  limits?: () => Promise<{ maxPromptBytes: number; tools?: { maxCount: number } }>;
 };
 
 export type Mcp = {

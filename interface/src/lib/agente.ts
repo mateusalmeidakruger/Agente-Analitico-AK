@@ -266,14 +266,42 @@ export async function responder(
   }
   turnos.push({ role: "user", content: pergunta });
 
-  const limites = await sample.limits().catch(() => null);
-  const podeUsarFerramentas = Boolean(limites?.tools) && mcp !== null;
-  const { text, truncated } = await sample(turnos, {
-    signal,
-    onText: ({ text }) => ev.aoEscrever(text),
-    ...(podeUsarFerramentas
-      ? { tools: ferramentas(mcp, ev).slice(0, limites?.tools?.maxCount ?? 32) }
-      : { cache: false }),
-  });
+  // apps mais antigos não têm sample.limits(): sem ele, tenta com ferramentas e cai para sem
+  const lerLimites = sample.limits;
+  const limites =
+    typeof lerLimites === "function" ? await Promise.resolve().then(() => lerLimites.call(sample)).catch(() => null) : null;
+  const ferramentasOk = mcp !== null && (limites === null || Boolean(limites.tools));
+  const onText = ({ text }: { text: string }) => ev.aoEscrever(text);
+
+  const semFerramentas = async (motivo: string) => {
+    const aviso = `Atenção: nesta visualização você está SEM ferramentas (${motivo}). Diga isso ao Mateus em uma frase e responda só o que der sem dados.`;
+    const comAviso = [...turnos.slice(0, -1), { role: "user" as const, content: aviso }, turnos.at(-1)!];
+    try {
+      return await sample(comAviso, { signal, onText, cache: false });
+    } catch (e) {
+      // app ainda mais antigo, que só aceita o prompt como texto único
+      if (codigoErro(e) !== "invalid_request") throw e;
+      const texto = comAviso.map((t) => `${t.role === "user" ? "Mateus" : "Agente"}: ${t.content}`).join("\n\n");
+      return await sample(texto, { signal, onText, cache: false });
+    }
+  };
+
+  let resultado: { text: string; truncated: boolean };
+  if (!ferramentasOk) {
+    resultado = await semFerramentas(mcp ? "este app não aceita ferramentas" : "o PC não está conectado");
+  } else {
+    try {
+      resultado = await sample(turnos, {
+        signal,
+        onText,
+        tools: ferramentas(mcp, ev).slice(0, limites?.tools?.maxCount ?? 32),
+      });
+    } catch (e) {
+      const c = codigoErro(e);
+      if (c !== "tools_unavailable" && c !== "invalid_request" && c !== "capability_removed") throw e;
+      resultado = await semFerramentas(`o app recusou as ferramentas: ${c}`);
+    }
+  }
+  const { text, truncated } = resultado;
   return truncated ? `${text}\n\n_(A resposta foi cortada no limite de tamanho. Peça uma parte de cada vez.)_` : text;
 }
