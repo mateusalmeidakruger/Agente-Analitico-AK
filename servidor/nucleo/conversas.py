@@ -68,10 +68,12 @@ def salvar(cfg, conversa):
 
 
 def apagar(cfg, id_conversa):
-    """Move para dados\\lixeira (dá para recuperar)."""
+    """Move para dados\\excluidos (dá para recuperar movendo de volta). Nunca sobrescreve um excluído."""
     p = _caminho(cfg, id_conversa)
     if not p.exists():
         raise ErroConversa(f"conversa {id_conversa} não existe")
-    destino = cfg.dados / "lixeira" / p.name
+    destino = cfg.dados / "excluidos" / p.name
+    if destino.exists():
+        destino = destino.with_name(f"{p.stem}_{datetime.now():%Y%m%d_%H%M%S}.json")
     shutil.move(str(p), str(destino))
     return str(destino)

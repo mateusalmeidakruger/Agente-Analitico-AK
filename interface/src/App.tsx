@@ -76,6 +76,7 @@ export default function App() {
   const [preencher, setPreencher] = useState<{ texto: string; n: number }>();
   const [aviso, setAviso] = useState<string | null>(null);
   const [diagnostico, setDiagnostico] = useState<string | null>(null);
+  const [excluir, setExcluir] = useState<{ conversa: ResumoConversa; excluindo: boolean } | null>(null);
   const arquivos = useRef(new Map<string, string>());
   const [prontos, setProntos] = useState(new Set<string>());
   const controle = useRef<AbortController | null>(null);
@@ -167,6 +168,24 @@ export default function App() {
       if (window.innerWidth < 768) setLateralAberta(false);
     } catch {
       setAviso("Não consegui abrir essa conversa.");
+    }
+  };
+
+  // move para dados\excluidos no PC; se for a conversa aberta, volta para uma conversa nova
+  const confirmarExclusao = async () => {
+    if (!mcp || !excluir) return;
+    const alvo = excluir.conversa;
+    setExcluir({ conversa: alvo, excluindo: true });
+    try {
+      await chamarPc(mcp, "apagar_conversa", { id: alvo.id });
+      setConversas((lista) => lista.filter((c) => c.id !== alvo.id));
+      if (conversa.id === alvo.id) setConversa(conversaVazia());
+      setAviso(`"${alvo.titulo}" foi para dados\\excluidos no PC.`);
+      void atualizarLista();
+    } catch (e) {
+      setAviso(codigoErro(e) === "cancelled" ? "Exclusão cancelada no app." : "Não consegui excluir a conversa.");
+    } finally {
+      setExcluir(null);
     }
   };
 
@@ -311,6 +330,7 @@ export default function App() {
                     semPc={pc === "desconectado"}
                     aoAbrir={abrir}
                     aoNova={nova}
+                    aoExcluir={(c) => !ocupado && setExcluir({ conversa: c, excluindo: false })}
                   />
                 </div>
               </motion.aside>
@@ -462,6 +482,38 @@ export default function App() {
                 className="rounded-lg bg-azul px-3.5 py-1.5 text-[13px] font-medium text-white hover:brightness-110"
               >
                 Rodar agora
+              </button>
+            </div>
+          </div>
+        )}
+      </AnimatedModal>
+      <AnimatedModal aberto={excluir !== null} aoFechar={() => !excluir?.excluindo && setExcluir(null)}>
+        {excluir && (
+          <div className="flex flex-col gap-4 p-5">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-[17px] font-semibold text-texto">Excluir esta conversa?</h2>
+              <p className="truncate text-[13px] font-medium text-texto">{excluir.conversa.titulo}</p>
+              <p className="text-[13px] leading-relaxed text-texto-2">
+                Ela sai da lista e vai para a pasta <span className="font-mono text-[12px]">dados\excluidos</span> no PC. Para
+                recuperar, é só mover o arquivo de volta para <span className="font-mono text-[12px]">dados\conversas</span>.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={excluir.excluindo}
+                onClick={() => setExcluir(null)}
+                className="rounded-lg border border-borda px-3.5 py-1.5 text-[13px] text-texto hover:bg-superficie disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={excluir.excluindo}
+                onClick={confirmarExclusao}
+                className="rounded-lg bg-vermelho px-3.5 py-1.5 text-[13px] font-medium text-white hover:brightness-110 disabled:opacity-60"
+              >
+                {excluir.excluindo ? "Excluindo…" : "Excluir"}
               </button>
             </div>
           </div>

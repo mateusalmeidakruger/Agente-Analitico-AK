@@ -1,4 +1,4 @@
-import { IconMessage2, IconPlus, IconSearch } from "@tabler/icons-react";
+import { IconMessage2, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import type { ResumoConversa } from "@/lib/tipos";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ export function BarraLateral({
   semPc,
   aoAbrir,
   aoNova,
+  aoExcluir,
 }: {
   conversas: ResumoConversa[];
   atual: string | undefined;
@@ -28,6 +29,7 @@ export function BarraLateral({
   semPc: boolean;
   aoAbrir: (id: string) => void;
   aoNova: () => void;
+  aoExcluir: (c: ResumoConversa) => void;
 }) {
   const [busca, setBusca] = useState("");
   const grupos = useMemo(() => {
@@ -81,17 +83,30 @@ export function BarraLateral({
             <h2 className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-texto-3">{nome}</h2>
             <ul className="flex flex-col gap-0.5">
               {itens.map((c) => (
-                <li key={c.id}>
+                <li key={c.id} className="group relative">
                   <button
                     type="button"
                     onClick={() => aoAbrir(c.id)}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px]",
+                      "flex w-full items-center gap-2 rounded-lg py-1.5 pl-2 pr-8 text-left text-[13px]",
                       c.id === atual ? "bg-azul text-white" : "text-texto hover:bg-realce",
                     )}
                   >
                     <IconMessage2 className={cn("h-4 w-4 shrink-0", c.id === atual ? "text-white" : "text-texto-3")} stroke={1.6} />
                     <span className="truncate">{c.titulo}</span>
+                  </button>
+                  {/* aparece ao passar o mouse ou focar; no celular fica sempre visível */}
+                  <button
+                    type="button"
+                    onClick={() => aoExcluir(c)}
+                    aria-label={`Excluir a conversa ${c.titulo}`}
+                    title="Excluir conversa"
+                    className={cn(
+                      "absolute right-1 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md opacity-100 transition-opacity focus:opacity-100 md:opacity-0 md:group-hover:opacity-100",
+                      c.id === atual ? "text-white/80 hover:bg-white/15 hover:text-white" : "text-texto-3 hover:bg-realce hover:text-vermelho",
+                    )}
+                  >
+                    <IconTrash className="h-3.5 w-3.5" stroke={1.8} />
                   </button>
                 </li>
               ))}

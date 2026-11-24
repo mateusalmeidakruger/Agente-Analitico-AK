@@ -12,7 +12,7 @@ Fica em `servidor\`. O Artifact do chat (app desktop do Claude) chama estas ferr
 | --- | --- |
 | `status_base` | Laudo do validador + veredito do auditor-base; aviso quando a base do dia não foi liberada |
 | `dias_uteis` | Dias úteis entre duas datas (feriados no `config.json`) |
-| `listar_conversas`, `carregar_conversa`, `salvar_conversa`, `apagar_conversa` | Conversas em `dados\conversas\<id>.json`; apagar move para `dados\lixeira` |
+| `listar_conversas`, `carregar_conversa`, `salvar_conversa`, `apagar_conversa` | Conversas em `dados\conversas\<id>.json`; excluir move para `dados\excluidos` (nunca sobrescreve) |
 | `listar_arquivos`, `buscar_arquivo` | Cópia (inteira ou recortada por filtro) dos arquivos do RPA, em `dados\arquivos_entregues`; CPF e nascimento saem removidos por padrão |
 | `consultar_cnpj`, `contas_fora_do_sla` | Chamados do RPA + situação na Parcial2; fora do SLA = pendente há mais de 3 dias úteis desde a digitação (CANCELADO não conta) |
 | `listar_scripts`, `rodar_script` | Só o que está em `scripts.json`; nível 3 exige `confirmado=true` e começa desabilitado |

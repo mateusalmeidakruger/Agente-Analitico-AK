@@ -59,13 +59,13 @@ def cfg(tmp_path):
 
 # ---------- conversas ----------
 
-def test_conversa_salva_carrega_lista_e_vai_para_lixeira(cfg):
+def test_conversa_salva_carrega_lista_e_vai_para_excluidos(cfg):
     id_ = conversas.salvar(cfg, {"titulo": "Zerados", "mensagens": [{"papel": "usuario", "texto": "oi"}]})
     assert conversas.carregar(cfg, id_)["titulo"] == "Zerados"
     assert [c["id"] for c in conversas.listar(cfg)] == [id_]
     conversas.apagar(cfg, id_)
     assert conversas.listar(cfg) == []
-    assert (cfg.dados / "lixeira" / f"{id_}.json").exists()
+    assert (cfg.dados / "excluidos" / f"{id_}.json").exists()
 
 
 @pytest.mark.parametrize("ruim", ["../../x", "C:\\Windows\\a", "2026-11-24_xyz"])
@@ -170,3 +170,11 @@ def test_nivel_3_sem_aval_nao_roda(cfg):
     r = scripts.rodar(cfg, "externo")
     assert r["executado"] is False and r["precisa_aval"] is True
     assert list((cfg.dados / "logs").glob("*")) == []
+
+
+def test_excluir_duas_vezes_o_mesmo_id_nao_sobrescreve(cfg):
+    id_ = conversas.salvar(cfg, {"titulo": "A"})
+    conversas.apagar(cfg, id_)
+    conversas.salvar(cfg, {"id": id_, "titulo": "B"})
+    conversas.apagar(cfg, id_)
+    assert len(list((cfg.dados / "excluidos").glob(f"{id_}*.json"))) == 2
