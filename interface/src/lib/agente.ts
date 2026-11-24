@@ -1,0 +1,271 @@
+// O agente: regras, ferramentas (servidor ak_local no PC + planilha de chamados pelo
+// Microsoft 365) e o ciclo de uma resposta com o Claude do próprio plano (capability sample).
+import { codigoErro, type FerramentaPagina, type Mcp, type Sample } from "./claude";
+import type { Anexo, Mensagem, UsoFerramenta } from "./tipos";
+
+export const HOST = "host:ak_local";
+export const M365 = "Microsoft 365";
+const PLANILHA_CHAMADOS =
+  "file:///b!xbRcSjqQRke3QXsCSBZcy4WPVA9CvvJHgM9uPW62Uw-YfXUN0gMCR4w2qJCOMY1P/01LVVIORSGNPRGBYMEPZHYXSJJDE3NNXPI";
+const LIMITE_RESULTADO = 28_000; // o resultado de uma ferramenta vai até 32 KB
+const TURNOS_HISTORICO = 20;
+
+function regras(): string {
+  const hoje = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+  return `Você é o Agente Analítico AK, o analista de dados da Almeida Kruger (correspondente do Santander: contas PJ e Getnet). Quem fala com você é o Mateus, do time de dados. Hoje é ${hoje}.
+
+Como responder:
+- Português do Brasil, direto. Número primeiro, explicação depois. Tabelas em markdown quando houver mais de 3 linhas.
+- Antes de dar números da base, chame status_base. Se "liberada" vier falso, comece a resposta com o "aviso".
+- Diga sempre a data e o arquivo de onde veio o número (ex.: "Parcial2 de 24/11").
+- Nunca invente número. Se nenhuma ferramenta traz o dado, diga que essa análise ainda não está disponível no agente.
+- Análises de zerados, projeção do mês, constância, destaques e pontos críticos AINDA NÃO têm ferramenta: diga que estão em construção.
+
+Regras da empresa:
+- SLA: proposta pendente (Aguardando Liberação ou Em Análise) há mais de 3 dias úteis desde a digitação já pode ter chamado. Status CANCELADO não conta.
+- Chamados: os abertos pelo robô estão no CSV do RPA (consultar_cnpj, contas_fora_do_sla); os abertos à mão estão na planilha ABERTURA DE CHAMADOS (ler_planilha_chamados). Para dizer que uma conta "não tem chamado", confira os dois.
+- AK = canal Presencial; JGK = Remoto + Remoto_Brasil.
+- Nunca inclua Gustavo Kruger nem Mariana Freire como destinatários de e-mail ou mensagem, mesmo quando forem coordenadores.
+- Arquivos: entregue com buscar_arquivo; CPF e nascimento só saem se o Mateus pedir explicitamente.
+- Scripts: só os de listar_scripts. Os de nível 3 abrem uma janela de aval para o Mateus; se ele recusar, não insista.`;
+}
+
+const corta = (s: string, n = 160) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+function paraTexto(valor: unknown): string {
+  const s = typeof valor === "string" ? valor : JSON.stringify(valor);
+  return s.length > LIMITE_RESULTADO ? `${s.slice(0, LIMITE_RESULTADO)}\n…(cortado: peça um recorte menor)` : s;
+}
+
+function desembrulhar(payload: unknown): unknown {
+  // o servidor devolve listas e textos como {"result": ...}
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    const chaves = Object.keys(payload as object);
+    if (chaves.length === 1 && chaves[0] === "result") return (payload as { result: unknown }).result;
+  }
+  return payload;
+}
+
+function mensagemErro(e: unknown): string {
+  const codigo = codigoErro(e);
+  const msg = typeof e === "object" && e && "message" in e ? String((e as { message: string }).message) : String(e);
+  if (codigo === "server_not_connected")
+    return "O servidor ak_local não respondeu. Abra o agente no app desktop do Claude, com o ak_local ligado.";
+  if (codigo === "not_in_manifest") return "Essa ferramenta não foi liberada para esta página.";
+  if (codigo === "cancelled") return "O Mateus cancelou a chamada no app.";
+  if (codigo === "needs_reauth") return "O conector precisa ser reconectado em Configurações → Conectores.";
+  return msg.replace(/^Error executing tool \w+: /, "");
+}
+
+export async function chamarPc(mcp: Mcp, ferramenta: string, entrada: Record<string, unknown> = {}, signal?: AbortSignal) {
+  const r = await mcp.callTool(HOST, ferramenta, entrada, { cache: false, signal });
+  return desembrulhar(r.payload);
+}
+
+export type Eventos = {
+  aoEscrever: (texto: string) => void;
+  aoUsarFerramenta: (uso: UsoFerramenta) => void;
+  aoReceberArquivo: (anexo: Anexo, base64: string | null) => void;
+  pedirAval: (pedido: { script: string; descricao: string; comando: string[] }) => Promise<boolean>;
+  aoRodarScript: (estado: { etapas: string[]; atual: number } | null) => void;
+};
+
+function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
+  const registrar = (nome: string, entrada: Record<string, unknown>, resumo: string, erro = false) =>
+    ev.aoUsarFerramenta({ nome, entrada, resumo: corta(resumo), erro });
+
+  // embrulha uma ferramenta: registra o uso e devolve o erro em texto para o Claude
+  const ferramenta = (
+    name: string,
+    description: string,
+    properties: Record<string, unknown>,
+    exec: (input: Record<string, unknown>, signal: AbortSignal) => Promise<{ resultado: unknown; resumo: string }>,
+    required: string[] = [],
+  ): FerramentaPagina => ({
+    name,
+    description,
+    inputSchema: { type: "object", properties, required },
+    execute: async (input, { signal }) => {
+      if (!mcp) throw new Error("Ferramentas indisponíveis: abra o agente no app desktop do Claude.");
+      try {
+        const { resultado, resumo } = await exec(input, signal);
+        registrar(name, input, resumo);
+        return paraTexto(resultado);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : mensagemErro(e);
+        registrar(name, input, msg, true);
+        throw new Error(msg);
+      }
+    },
+  });
+
+  const pc = async (nome: string, entrada: Record<string, unknown>, signal: AbortSignal) => {
+    try {
+      return await chamarPc(mcp as Mcp, nome, entrada, signal);
+    } catch (e) {
+      throw new Error(mensagemErro(e));
+    }
+  };
+
+  return [
+    ferramenta("status_base", "Diz se a base do dia foi validada e liberada, com o aviso a mostrar se não foi. Chame antes de dar números.", {}, async (_i, s) => {
+      const r = (await pc("status_base", {}, s)) as { liberada: boolean; laudo: { data: string } };
+      return { resultado: r, resumo: r.liberada ? `base de ${r.laudo?.data} liberada` : "base não liberada" };
+    }),
+
+    ferramenta("listar_arquivos", "Lista os arquivos do RPA que podem ser entregues (nome, descrição, data, tamanho).", {}, async (_i, s) => {
+      const r = (await pc("listar_arquivos", {}, s)) as unknown[];
+      return { resultado: r, resumo: `${r.length} arquivos disponíveis` };
+    }),
+
+    ferramenta(
+      "buscar_arquivo",
+      "Entrega ao Mateus uma cópia de um arquivo do RPA (nome de listar_arquivos), inteira ou recortada por filtros. Devolve só os dados da cópia; o cartão com o botão Baixar aparece na conversa.",
+      {
+        nome: { type: "string", description: "nome do arquivo em listar_arquivos, ex.: usuarios_atual" },
+        filtros: {
+          type: "object",
+          description: 'opcional: {"Coluna": "texto contido"} ou {"Coluna": ["valor exato"]}',
+        },
+        incluir_dados_pessoais: { type: "boolean", description: "só true se o Mateus pedir CPF/nascimento" },
+      },
+      async (input, s) => {
+        const r = (await pc("buscar_arquivo", input, s)) as Anexo & { conteudo_base64?: string };
+        const { conteudo_base64, ...anexo } = r;
+        ev.aoReceberArquivo(anexo, conteudo_base64 ?? null);
+        return { resultado: anexo, resumo: `${anexo.nome_arquivo}${anexo.linhas != null ? ` · ${anexo.linhas} linhas` : ""}` };
+      },
+      ["nome"],
+    ),
+
+    ferramenta(
+      "consultar_cnpj",
+      "Ficha de um CNPJ: chamados abertos pelo robô e situação da proposta na Parcial2 (consultor, supervisor, dias úteis desde a digitação, se está fora do SLA).",
+      { cnpj: { type: "string" } },
+      async (input, s) => {
+        const r = (await pc("consultar_cnpj", input, s)) as { chamados_rpa: unknown[]; propostas_parcial2: unknown[] };
+        return { resultado: r, resumo: `${r.propostas_parcial2.length} proposta(s), ${r.chamados_rpa.length} chamado(s) do robô` };
+      },
+      ["cnpj"],
+    ),
+
+    ferramenta(
+      "contas_fora_do_sla",
+      "Propostas pendentes há mais de 3 dias úteis desde a digitação, marcando quais já têm chamado do robô. Filtros opcionais por parte do nome.",
+      { supervisor: { type: "string" }, coordenador: { type: "string" } },
+      async (input, s) => {
+        const r = (await pc("contas_fora_do_sla", input, s)) as { total: number; sem_chamado_rpa: number };
+        return { resultado: r, resumo: `${r.total} contas fora do SLA, ${r.sem_chamado_rpa} sem chamado do robô` };
+      },
+    ),
+
+    ferramenta(
+      "ler_planilha_chamados",
+      "Lê a planilha ABERTURA DE CHAMADOS (SharePoint) e devolve as linhas que contêm o termo (CNPJ, nome, nº do chamado). Sem termo, devolve as últimas 40 linhas. aba: 'controle' (Controle de Chamados, padrão) ou 'formulario' (respostas do formulário).",
+      { termo: { type: "string" }, aba: { type: "string", enum: ["controle", "formulario"] } },
+      async (input) => {
+        const pagina = input.aba === "formulario" ? 1 : 2;
+        let texto: string;
+        try {
+          const r = await (mcp as Mcp).callTool(M365, "read_resource", { uri: PLANILHA_CHAMADOS, startPage: pagina, endPage: pagina });
+          texto = typeof r.payload === "string" ? r.payload : (r.content.find((c) => c.type === "text")?.text ?? "");
+        } catch (e) {
+          throw new Error(`Planilha de chamados: ${mensagemErro(e)}`);
+        }
+        const linhas = texto.split("\n");
+        const inicio = linhas.findIndex((l) => l.startsWith("## Sheet"));
+        const cabecalho = linhas.slice(inicio, inicio + 2).join("\n");
+        const corpo = linhas.slice(inicio + 2).filter((l) => l.trim());
+        const termo = String(input.termo ?? "").trim();
+        const digitos = termo.replace(/\D/g, "");
+        const achadas = termo
+          ? corpo.filter((l) => l.toUpperCase().includes(termo.toUpperCase()) || (digitos.length >= 8 && l.replace(/\D/g, "").includes(digitos)))
+          : corpo.slice(-40);
+        return {
+          resultado: `${cabecalho}\n${achadas.join("\n")}`,
+          resumo: termo ? `${achadas.length} linha(s) com "${corta(termo, 30)}"` : `últimas ${achadas.length} linhas`,
+        };
+      },
+    ),
+
+    ferramenta("listar_scripts", "Scripts liberados, com nível (1 leitura, 2 gera arquivo, 3 ação externa) e opções aceitas.", {}, async (_i, s) => {
+      const r = (await pc("listar_scripts", {}, s)) as unknown[];
+      return { resultado: r, resumo: `${r.length} scripts na lista` };
+    }),
+
+    ferramenta(
+      "rodar_script",
+      "Roda um script da lista liberada no PC. opcoes: só as aceitas pelo script, ex.: {\"--cnpj\": \"01694030000108\"}. Nível 3 abre a janela de aval do Mateus antes.",
+      { nome: { type: "string" }, opcoes: { type: "object" } },
+      async (input, s) => {
+        const nome = String(input.nome);
+        const opcoes = (input.opcoes as Record<string, unknown>) ?? {};
+        const etapas = ["Conferindo a lista liberada", `Rodando ${nome} no PC`, "Lendo o resultado"];
+        ev.aoRodarScript({ etapas, atual: 0 });
+        try {
+          let r = (await pc("rodar_script", { nome, opcoes }, s)) as {
+            executado: boolean;
+            precisa_aval?: boolean;
+            comando?: string[];
+            ok?: boolean;
+            duracao_s?: number;
+          };
+          if (r.precisa_aval) {
+            const lista = (await pc("listar_scripts", {}, s)) as { nome: string; descricao: string }[];
+            const aprovado = await ev.pedirAval({
+              script: nome,
+              descricao: lista.find((x) => x.nome === nome)?.descricao ?? "",
+              comando: r.comando ?? [],
+            });
+            if (!aprovado) return { resultado: "O Mateus recusou o aval. Nada foi executado.", resumo: "aval recusado" };
+            ev.aoRodarScript({ etapas, atual: 1 });
+            r = (await pc("rodar_script", { nome, opcoes, confirmado: true }, s)) as typeof r;
+          } else ev.aoRodarScript({ etapas, atual: 1 });
+          ev.aoRodarScript({ etapas, atual: 2 });
+          return { resultado: r, resumo: r.ok ? `${nome} ok em ${r.duracao_s}s` : `${nome} terminou com erro` };
+        } finally {
+          ev.aoRodarScript(null);
+        }
+      },
+      ["nome"],
+    ),
+
+    ferramenta(
+      "dias_uteis",
+      "Dias úteis depois de inicio até fim (AAAA-MM-DD), sem fins de semana e feriados.",
+      { inicio: { type: "string" }, fim: { type: "string" } },
+      async (input, s) => {
+        const r = await pc("dias_uteis", input, s);
+        return { resultado: r, resumo: `${r} dias úteis` };
+      },
+      ["inicio", "fim"],
+    ),
+  ];
+}
+
+export async function responder(
+  sample: Sample,
+  mcp: Mcp | null,
+  historico: Mensagem[],
+  pergunta: string,
+  ev: Eventos,
+  signal: AbortSignal,
+): Promise<string> {
+  const turnos: { role: "user" | "assistant"; content: string }[] = [{ role: "user", content: regras() }];
+  for (const m of historico.slice(-TURNOS_HISTORICO)) {
+    if (!m.texto.trim()) continue;
+    turnos.push({ role: m.papel === "usuario" ? "user" : "assistant", content: m.texto });
+  }
+  turnos.push({ role: "user", content: pergunta });
+
+  const limites = await sample.limits().catch(() => null);
+  const podeUsarFerramentas = Boolean(limites?.tools) && mcp !== null;
+  const { text, truncated } = await sample(turnos, {
+    signal,
+    onText: ({ text }) => ev.aoEscrever(text),
+    ...(podeUsarFerramentas
+      ? { tools: ferramentas(mcp, ev).slice(0, limites?.tools?.maxCount ?? 32) }
+      : { cache: false }),
+  });
+  return truncated ? `${text}\n\n_(A resposta foi cortada no limite de tamanho. Peça uma parte de cada vez.)_` : text;
+}

@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+/* Layout: uma janela estilo macOS — barra de título com as três bolinhas, barra lateral
+   translúcida com as conversas e o chat ocupando o resto; o Dock fica sob a caixa de mensagem. */
+:root {
+  --bg: #e9ebef;            /* fundo atrás da janela (mesa) */
+  --janela: #ffffff;
+  --lateral: rgba(242, 243, 246, 0.78);
+  --barra: rgba(250, 250, 252, 0.86);
+  --superficie: #f4f5f8;     /* bolhas, cartões */
+  --borda: rgba(16, 24, 40, 0.10);
+  --texto: #1d1d1f;
+  --texto-2: #5f6470;
+  --texto-3: #8a8f99;
+  --azul: #007aff;           /* acento do sistema */
+  --azul-suave: rgba(0, 122, 255, 0.10);
+  --realce: rgba(16, 24, 40, 0.06);
+  --planilha: #1d6f42;
+  --planilha-suave: rgba(29, 111, 66, 0.12);
+  --verde: #1f9d55;
+  --amarelo: #b26a00;
+  --vermelho: #d70015;
+  --sombra: 0 24px 60px rgba(16, 24, 40, 0.16), 0 2px 8px rgba(16, 24, 40, 0.08);
+  --fonte: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  --fonte-mono: "JetBrains Mono", "SF Mono", ui-monospace, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e0f12;
+    --janela: #1c1c1f;
+    --lateral: rgba(40, 40, 44, 0.72);
+    --barra: rgba(34, 34, 38, 0.86);
+    --superficie: #2a2a2e;
+    --borda: rgba(255, 255, 255, 0.09);
+    --texto: #f2f2f4;
+    --texto-2: #a7a9b0;
+    --texto-3: #7c7f87;
+    --azul: #0a84ff;
+    --azul-suave: rgba(10, 132, 255, 0.16);
+  --realce: rgba(255, 255, 255, 0.07);
+  --planilha: #5cc98a;
+  --planilha-suave: rgba(92, 201, 138, 0.14);
+    --verde: #32d74b;
+    --amarelo: #ffd60a;
+    --vermelho: #ff6961;
+    --sombra: 0 24px 60px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0e0f12;
+  --janela: #1c1c1f;
+  --lateral: rgba(40, 40, 44, 0.72);
+  --barra: rgba(34, 34, 38, 0.86);
+  --superficie: #2a2a2e;
+  --borda: rgba(255, 255, 255, 0.09);
+  --texto: #f2f2f4;
+  --texto-2: #a7a9b0;
+  --texto-3: #7c7f87;
+  --azul: #0a84ff;
+  --azul-suave: rgba(10, 132, 255, 0.16);
+  --realce: rgba(255, 255, 255, 0.07);
+  --planilha: #5cc98a;
+  --planilha-suave: rgba(92, 201, 138, 0.14);
+  --verde: #32d74b;
+  --amarelo: #ffd60a;
+  --vermelho: #ff6961;
+  --sombra: 0 24px 60px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-janela: var(--janela);
+  --color-lateral: var(--lateral);
+  --color-barra: var(--barra);
+  --color-superficie: var(--superficie);
+  --color-borda: var(--borda);
+  --color-texto: var(--texto);
+  --color-texto-2: var(--texto-2);
+  --color-texto-3: var(--texto-3);
+  --color-azul: var(--azul);
+  --color-azul-suave: var(--azul-suave);
+  --color-realce: var(--realce);
+  --color-planilha: var(--planilha);
+  --color-planilha-suave: var(--planilha-suave);
+  --color-verde: var(--verde);
+  --color-amarelo: var(--amarelo);
+  --color-vermelho: var(--vermelho);
+  --font-sans: var(--fonte);
+  --font-mono: var(--fonte-mono);
+}
+
+html,
+body,
+#raiz {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--texto);
+  font-family: var(--fonte);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--azul);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Respostas do agente (markdown) */
+.resposta {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.resposta > * + * {
+  margin-top: 0.6em;
+}
+.resposta h1,
+.resposta h2,
+.resposta h3 {
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.resposta h1 { font-size: 1.15em; }
+.resposta h2 { font-size: 1.08em; }
+.resposta h3 { font-size: 1em; }
+.resposta ul { list-style: disc; padding-left: 1.3em; }
+.resposta ol { list-style: decimal; padding-left: 1.3em; }
+.resposta li + li { margin-top: 0.2em; }
+.resposta strong { font-weight: 600; }
+.resposta a { color: var(--azul); text-decoration: underline; }
+.resposta code {
+  font-family: var(--fonte-mono);
+  font-size: 0.88em;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 5px;
+  padding: 0.05em 0.35em;
+}
+.resposta pre {
+  overflow-x: auto;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 0.7em 0.9em;
+}
+.resposta pre code { border: 0; padding: 0; background: none; }
+.resposta .tabela {
+  overflow-x: auto;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+}
+.resposta table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.92em;
+  font-variant-numeric: tabular-nums;
+}
+.resposta th,
+.resposta td {
+  text-align: left;
+  padding: 0.45em 0.75em;
+  border-bottom: 1px solid var(--borda);
+  white-space: nowrap;
+}
+.resposta th {
+  font-weight: 600;
+  color: var(--texto-2);
+  background: var(--superficie);
+}
+.resposta tr:last-child td { border-bottom: 0; }

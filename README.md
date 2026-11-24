@@ -19,6 +19,16 @@ Fica em `servidor\`. O Artifact do chat (app desktop do Claude) chama estas ferr
 
 A planilha ABERTURA DE CHAMADOS não passa pelo servidor: o Artifact lê pelo conector Microsoft 365.
 
+## Interface (Artifact)
+
+Fica em `interface\` (React + Tailwind + Motion, componentes do Aceternity UI). Publicada em https://claude.ai/artifact/QDrJigPUayddHFPWFVDuX7 e só funciona com o PC no app desktop do Claude (o `ak_local` é um servidor local).
+
+```
+cd interface
+npm install
+npm run build      # gera distgente-analitico-ak.html, o arquivo publicado
+```
+
 ## Instalar
 
 ```
