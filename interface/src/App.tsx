@@ -18,7 +18,7 @@ import { FloatingDock } from "@/components/ui/floating-dock";
 import { MultiStepLoader } from "@/components/ui/multi-step-loader";
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
-import { chamarPc, responder } from "@/lib/agente";
+import { chamarPc, comoLista, responder } from "@/lib/agente";
 import { codigoErro, type Downloads, type Mcp, type Sample, usar } from "@/lib/claude";
 import type { Anexo, Conversa, Mensagem, ResumoConversa, StatusBase, UsoFerramenta } from "@/lib/tipos";
 import { cn } from "@/lib/utils";
@@ -31,6 +31,9 @@ const SUGESTOES = [
   "Quais scripts você pode rodar?",
 ];
 
+// status_base fora do formato esperado vira "sem informação", nunca derruba a tela
+const comoBase = (v: unknown): StatusBase | null =>
+  v && typeof v === "object" && "laudo" in v && (v as StatusBase).laudo ? (v as StatusBase) : null;
 const agora = () => new Date().toISOString().slice(0, 19);
 const conversaVazia = (): Conversa => ({ titulo: "Nova conversa", mensagens: [] });
 
@@ -91,8 +94,8 @@ export default function App() {
     try {
       const [st, lista] = await Promise.all([chamarPc(m, "status_base"), chamarPc(m, "listar_conversas")]);
       if (!vivo()) return;
-      setBase(st as StatusBase);
-      setConversas(lista as ResumoConversa[]);
+      setBase(comoBase(st));
+      setConversas(comoLista<ResumoConversa>(lista));
       setPc("conectado");
       setDiagnostico(null);
     } catch (e) {
@@ -135,7 +138,7 @@ export default function App() {
   const atualizarLista = useCallback(async () => {
     if (!mcp) return;
     try {
-      setConversas((await chamarPc(mcp, "listar_conversas")) as ResumoConversa[]);
+      setConversas(comoLista<ResumoConversa>(await chamarPc(mcp, "listar_conversas")));
     } catch {
       /* a lista antiga continua na tela */
     }
@@ -218,7 +221,7 @@ export default function App() {
             usos.push(u);
             setEscrevendo((e) => (e ? { ...e, ferramentas: [...usos] } : e));
             if (u.nome === "status_base" && !u.erro && mcp)
-              chamarPc(mcp, "status_base").then((s) => setBase(s as StatusBase), () => {});
+              chamarPc(mcp, "status_base").then((s) => setBase(comoBase(s)), () => {});
           },
           aoReceberArquivo: (a, b64) => {
             anexos.push(a);

@@ -78,9 +78,9 @@ def dias_uteis(inicio: str, fim: str) -> int:
 # ---------- conversas ----------
 
 @ferramenta(leitura=True)
-def listar_conversas() -> list:
+def listar_conversas() -> dict:
     """Lista as conversas salvas (id, título, datas, nº de mensagens), da mais recente para a mais antiga."""
-    return conversas.listar(cfg)
+    return {"itens": conversas.listar(cfg)}
 
 
 @ferramenta(leitura=True)
@@ -104,9 +104,9 @@ def apagar_conversa(id: str) -> str:
 # ---------- arquivos do RPA ----------
 
 @ferramenta(leitura=True)
-def listar_arquivos() -> list:
+def listar_arquivos() -> dict:
     """Arquivos do RPA que o agente pode entregar, com data de modificação e tamanho."""
-    return arquivos.listar(cfg)
+    return {"itens": arquivos.listar(cfg)}
 
 
 @ferramenta(leitura=False)
@@ -137,9 +137,9 @@ def contas_fora_do_sla(supervisor: str | None = None, coordenador: str | None = 
 # ---------- scripts ----------
 
 @ferramenta(leitura=True)
-def listar_scripts() -> list:
+def listar_scripts() -> dict:
     """Scripts liberados, com nível (1 leitura, 2 gera arquivo, 3 ação externa) e opções aceitas."""
-    return scripts.listar(cfg)
+    return {"itens": scripts.listar(cfg)}
 
 
 @ferramenta(leitura=False)

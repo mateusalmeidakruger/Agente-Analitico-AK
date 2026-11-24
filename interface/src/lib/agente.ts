@@ -57,6 +57,14 @@ function mensagemErro(e: unknown): string {
   return msg.replace(/^Error executing tool \w+: /, "");
 }
 
+/** Resposta de uma ferramenta que devolve lista: sempre um array (vazio se não veio nada). */
+export function comoLista<T>(valor: unknown): T[] {
+  if (Array.isArray(valor)) return valor as T[];
+  if (valor && typeof valor === "object" && Array.isArray((valor as { itens?: unknown }).itens))
+    return (valor as { itens: T[] }).itens;
+  return [];
+}
+
 export async function chamarPc(mcp: Mcp, ferramenta: string, entrada: Record<string, unknown> = {}, signal?: AbortSignal) {
   const r = await mcp.callTool(HOST, ferramenta, entrada, { cache: false, signal });
   return desembrulhar(r.payload);
@@ -114,7 +122,7 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
     }),
 
     ferramenta("listar_arquivos", "Lista os arquivos do RPA que podem ser entregues (nome, descrição, data, tamanho).", {}, async (_i, s) => {
-      const r = (await pc("listar_arquivos", {}, s)) as unknown[];
+      const r = comoLista(await pc("listar_arquivos", {}, s));
       return { resultado: r, resumo: `${r.length} arquivos disponíveis` };
     }),
 
@@ -189,7 +197,7 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
     ),
 
     ferramenta("listar_scripts", "Scripts liberados, com nível (1 leitura, 2 gera arquivo, 3 ação externa) e opções aceitas.", {}, async (_i, s) => {
-      const r = (await pc("listar_scripts", {}, s)) as unknown[];
+      const r = comoLista(await pc("listar_scripts", {}, s));
       return { resultado: r, resumo: `${r.length} scripts na lista` };
     }),
 
@@ -211,7 +219,7 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
             duracao_s?: number;
           };
           if (r.precisa_aval) {
-            const lista = (await pc("listar_scripts", {}, s)) as { nome: string; descricao: string }[];
+            const lista = comoLista<{ nome: string; descricao: string }>(await pc("listar_scripts", {}, s));
             const aprovado = await ev.pedirAval({
               script: nome,
               descricao: lista.find((x) => x.nome === nome)?.descricao ?? "",
