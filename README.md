@@ -26,7 +26,7 @@ Fica em `interface\` (React + Tailwind + Motion, componentes do Aceternity UI). 
 ```
 cd interface
 npm install
-npm run build      # gera dist\agente-analitico-ak.html, o arquivo publicado
+npm run build      # gera dist\agente-analitico-ak.html, o arquivo publicado
 ```
 
 ## Instalar
