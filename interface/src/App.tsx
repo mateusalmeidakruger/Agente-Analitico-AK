@@ -14,6 +14,7 @@ import { Avatar } from "@/components/Avatar";
 import { BarraLateral } from "@/components/BarraLateral";
 import { BarraTitulo, type EstadoPc } from "@/components/BarraTitulo";
 import { Bolha } from "@/components/Mensagens";
+import { MenuChamados } from "@/components/MenuChamados";
 import { AnimatedModal } from "@/components/ui/animated-modal";
 import { FloatingDock } from "@/components/ui/floating-dock";
 import { MultiStepLoader } from "@/components/ui/multi-step-loader";
@@ -278,13 +279,14 @@ export default function App() {
   };
 
   const preencherCaixa = (texto: string) => setPreencher({ texto, n: Date.now() });
+  const [menuChamados, setMenuChamados] = useState(false);
 
   const dock = [
     { titulo: "Nova conversa", icone: <IconPlus className="h-full w-full" stroke={1.8} />, aoClicar: nova },
     {
       titulo: "Chamados",
       icone: <IconTicket className="h-full w-full" stroke={1.6} />,
-      aoClicar: () => preencherCaixa("Quais contas estão fora do SLA e ainda sem chamado? Confira também a planilha de chamados."),
+      aoClicar: () => setMenuChamados((a) => !a),
     },
     {
       titulo: "Arquivos",
@@ -438,6 +440,7 @@ export default function App() {
                     </button>
                   )}
                 </div>
+                <MenuChamados aberto={menuChamados} aoFechar={() => setMenuChamados(false)} aoEscolher={preencherCaixa} />
                 <FloatingDock itens={dock} className={cn(ocupado && "pointer-events-none opacity-60")} />
               </div>
             </div>

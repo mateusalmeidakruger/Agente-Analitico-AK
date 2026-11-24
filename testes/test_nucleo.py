@@ -178,3 +178,59 @@ def test_excluir_duas_vezes_o_mesmo_id_nao_sobrescreve(cfg):
     conversas.salvar(cfg, {"id": id_, "titulo": "B"})
     conversas.apagar(cfg, id_)
     assert len(list((cfg.dados / "excluidos").glob(f"{id_}*.json"))) == 2
+
+
+# ---------- consulta no portal ----------
+
+def _consulta(cfg, gerado="24/11/2026 16:14", desde="22/11/2026"):
+    chamados_ = [
+        {"chamado": "#A", "cnpj": "35643897000156", "status": "Concluído", "conclusao": "24/11/2026 12:35"},
+        {"chamado": "#B", "cnpj": "69469815000110", "status": "Concluído", "conclusao": "22/11/2026 00:10"},
+        {"chamado": "#C", "cnpj": "01694030000108", "status": "Em andamento", "conclusao": None},
+    ]
+    arq = cfg.dados / "consulta_chamados" / "ultima_consulta.json"
+    arq.write_text(json.dumps({"gerado_em": gerado, "filtro": {"concluidos_desde": desde},
+                               "totais": {}, "chamados": chamados_}), encoding="utf-8")
+
+
+def test_portal_sem_consulta_pede_para_rodar_com_os_dias_certos(cfg):
+    r = chamados.consultar_portal(cfg, desde="2026-11-22", hoje=HOJE)
+    assert r["precisa_rodar"] and r["dias_sugeridos"] == 2
+
+
+def test_portal_janela_comeca_a_meia_noite(cfg):
+    _consulta(cfg)  # --dias 2 em 24/11 cobre desde 22/11 00:00
+    r = chamados.consultar_portal(cfg, desde="2026-11-22", hoje=HOJE)
+    assert not r["precisa_rodar"]
+    assert {c["chamado"] for c in r["chamados"]} == {"#A", "#B", "#C"}  # #B concluído 22/11 00:10 entra
+    r = chamados.consultar_portal(cfg, desde="2026-11-23", status="concluido", hoje=HOJE)
+    assert [c["chamado"] for c in r["chamados"]] == ["#A"]
+
+
+def test_portal_pede_mais_dias_quando_a_consulta_nao_cobre(cfg):
+    _consulta(cfg)
+    r = chamados.consultar_portal(cfg, desde="2026-11-20", hoje=HOJE)
+    assert r["precisa_rodar"] and r["dias_sugeridos"] == 4
+
+
+def test_portal_consulta_de_outro_dia_pede_para_rodar(cfg):
+    _consulta(cfg, gerado="23/11/2026 09:00", desde="21/11/2026")
+    r = chamados.consultar_portal(cfg, hoje=HOJE)
+    assert r["precisa_rodar"] and r["dias_sugeridos"] == 7
+
+
+def test_portal_filtro_por_cnpj_e_data_invalida(cfg):
+    _consulta(cfg)
+    r = chamados.consultar_portal(cfg, cnpj="01.694.030/0001-08", hoje=HOJE)
+    assert [c["chamado"] for c in r["chamados"]] == ["#C"]
+    with pytest.raises(Exception, match="AAAA-MM-DD"):
+        chamados.consultar_portal(cfg, desde="22/11", hoje=HOJE)
+
+
+def test_script_de_consulta_monta_saida_na_pasta_do_agente():
+    c = Config()
+    _, _, comando = scripts.montar_comando(c, "chamados_consultar", {"--dias": "2"})
+    assert comando[-2:] == ["--dias", "2"]
+    assert comando[comando.index("--saida") + 1].endswith(r"consulta_chamados\ultima_consulta.json")
+    with pytest.raises(scripts.ErroScript):
+        scripts.montar_comando(c, "chamados_consultar", {"--dias": "61"})

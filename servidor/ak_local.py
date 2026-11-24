@@ -134,6 +134,18 @@ def contas_fora_do_sla(supervisor: str | None = None, coordenador: str | None = 
     return _limpo(chamados.contas_fora_do_sla(cfg, supervisor, coordenador))
 
 
+@ferramenta(leitura=True)
+def consultar_chamados_portal(desde: str | None = None, ate: str | None = None, cnpj: str | None = None,
+                              status: str | None = None) -> dict:
+    """Chamados Conta PJ do portal Process & Operations, pela última consulta do RPA Consulta Chamados.
+
+    desde/ate (AAAA-MM-DD) filtram pela data de conclusão; status: "aberto" ou "concluido".
+    A janela do RPA é --dias N = em aberto + concluídos desde 00:00 de (hoje - N). Se a consulta
+    guardada não cobre o período, volta precisa_rodar=true com os dias certos para rodar_script.
+    """
+    return _limpo(chamados.consultar_portal(cfg, desde, ate, cnpj, status))
+
+
 # ---------- scripts ----------
 
 @ferramenta(leitura=True)

@@ -24,6 +24,10 @@ Como responder:
 Regras da empresa:
 - SLA: proposta pendente (Aguardando Liberação ou Em Análise) há mais de 3 dias úteis desde a digitação já pode ter chamado. Status CANCELADO não conta.
 - Chamados: os abertos pelo robô estão no CSV do RPA (consultar_cnpj, contas_fora_do_sla); os abertos à mão estão na planilha ABERTURA DE CHAMADOS (ler_planilha_chamados). Para dizer que uma conta "não tem chamado", confira os dois.
+- Situação dos chamados no portal Process & Operations (em aberto, concluído, quem atende, data de conclusão): use consultar_chamados_portal. Ele lê a última consulta do RPA Consulta Chamados.
+  - Janela: --dias N traz os chamados em aberto + os concluídos desde 00:00 de (hoje - N). Ex.: "de dois dias atrás" = desde hoje-2 = --dias 2; "concluídos ontem" = desde e ate = ontem (--dias 1).
+  - Passe desde/ate em AAAA-MM-DD conforme o pedido. Se voltar precisa_rodar=true, rode rodar_script("chamados_consultar", {"--dias": "<dias_sugeridos>"}) (leva uns 45 s, abre o navegador no PC) e chame consultar_chamados_portal de novo.
+  - Diga sempre de quando é a consulta (consulta_feita_em) e o período coberto.
 - AK = canal Presencial; JGK = Remoto + Remoto_Brasil.
 - Nunca inclua Gustavo Kruger nem Mariana Freire como destinatários de e-mail ou mensagem, mesmo quando forem coordenadores.
 - Arquivos: entregue com buscar_arquivo; CPF e nascimento só saem se o Mateus pedir explicitamente.
@@ -192,6 +196,30 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
         return {
           resultado: `${cabecalho}\n${achadas.join("\n")}`,
           resumo: termo ? `${achadas.length} linha(s) com "${corta(termo, 30)}"` : `últimas ${achadas.length} linhas`,
+        };
+      },
+    ),
+
+    ferramenta(
+      "consultar_chamados_portal",
+      "Chamados Conta PJ do portal Process & Operations pela última consulta do RPA: em aberto + concluídos no período. desde/ate (AAAA-MM-DD) filtram pela data de conclusão; status 'aberto' ou 'concluido'; cnpj opcional. Se a consulta guardada não cobre o período, volta precisa_rodar=true com dias_sugeridos.",
+      {
+        desde: { type: "string", description: "AAAA-MM-DD" },
+        ate: { type: "string", description: "AAAA-MM-DD" },
+        cnpj: { type: "string" },
+        status: { type: "string", enum: ["aberto", "concluido"] },
+      },
+      async (input, s) => {
+        const r = (await pc("consultar_chamados_portal", input, s)) as {
+          precisa_rodar: boolean;
+          dias_sugeridos?: number;
+          totais?: { em_aberto: number; concluidos: number };
+        };
+        return {
+          resultado: r,
+          resumo: r.precisa_rodar
+            ? `precisa consultar o portal (--dias ${r.dias_sugeridos})`
+            : `${r.totais?.em_aberto ?? 0} em aberto, ${r.totais?.concluidos ?? 0} concluídos`,
         };
       },
     ),

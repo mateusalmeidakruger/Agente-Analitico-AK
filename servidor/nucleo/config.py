@@ -19,7 +19,7 @@ class Config:
         # AK_DADOS / AK_RAIZ_FLUXO permitem apontar para pastas de teste
         self.dados = Path(dados or os.environ.get("AK_DADOS") or PROJETO / "dados")
         self.raiz_fluxo = Path(raiz_fluxo or os.environ.get("AK_RAIZ_FLUXO") or self.bruto["raiz_fluxo"])
-        for sub in ("conversas", "excluidos", "arquivos_entregues", "logs", "validador"):
+        for sub in ("conversas", "excluidos", "arquivos_entregues", "logs", "validador", "consulta_chamados"):
             (self.dados / sub).mkdir(parents=True, exist_ok=True)
 
     def caminho_fluxo(self, relativo):

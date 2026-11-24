@@ -34,6 +34,17 @@
       "args_opcoes": {
         "--cnpj": "^\\d{14}$"
       }
+    },
+    "chamados_consultar": {
+      "descricao": "Consulta (só leitura) no portal Process & Operations os chamados Conta PJ em aberto e os concluídos desde a meia-noite de N dias atrás; grava o resultado na pasta do agente",
+      "caminho": "RPA Consulta Chamados\\consulta_chamados.py",
+      "nivel": 2,
+      "habilitado": true,
+      "timeout_s": 300,
+      "args_fixos": ["--saida", "{dados}\\consulta_chamados\\ultima_consulta.json"],
+      "args_opcoes": {
+        "--dias": "^([0-9]|[1-5][0-9]|60)$"
+      }
     }
   }
 }
