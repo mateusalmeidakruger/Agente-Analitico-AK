@@ -92,7 +92,7 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
   ): FerramentaPagina => ({
     name,
     description,
-    inputSchema: { type: "object", properties, required },
+    inputSchema: { type: "object", properties, ...(required.length ? { required } : {}) },
     execute: async (input, { signal }) => {
       if (!mcp) throw new Error("Ferramentas indisponíveis: abra o agente no app desktop do Claude.");
       try {

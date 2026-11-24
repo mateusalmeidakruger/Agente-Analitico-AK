@@ -240,13 +240,14 @@ export default function App() {
     } catch (e) {
       const c = codigoErro(e);
       const parcial = typeof e === "object" && e && "text" in e ? String((e as { text?: string }).text ?? "") : "";
+      const detalhe = typeof e === "object" && e && "message" in e ? String((e as { message: string }).message).slice(0, 300) : String(e);
       resposta = {
         papel: "agente",
         texto: c === "refused" ? "" : parcial,
         hora: agora(),
         ferramentas: usos,
         anexos,
-        erro: c === "cancelled" ? "Resposta interrompida." : (COPIA_ERRO_SAMPLE[c] ?? "A resposta falhou no meio. Tente de novo."),
+        erro: c === "cancelled" ? "Resposta interrompida." : `${COPIA_ERRO_SAMPLE[c] ?? "A resposta falhou."} (${c}: ${detalhe})`,
       };
     }
     atual = { ...atual, mensagens: [...atual.mensagens, resposta] };
