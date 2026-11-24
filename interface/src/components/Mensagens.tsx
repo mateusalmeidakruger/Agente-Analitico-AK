@@ -1,6 +1,7 @@
 import { IconAlertTriangle, IconDownload, IconFileSpreadsheet, IconTool } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { memo, useMemo } from "react";
+import { Avatar } from "@/components/Avatar";
 import { paraHtml } from "@/lib/markdown";
 import type { Anexo, Mensagem, UsoFerramenta } from "@/lib/tipos";
 import { cn } from "@/lib/utils";
@@ -115,7 +116,9 @@ export function Bolha({
     );
   }
   return (
-    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 flex-col gap-2.5">
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex min-w-0 gap-3">
+      <Avatar tamanho={30} className="mt-0.5" />
+      <div className="flex min-w-0 flex-1 flex-col gap-2.5">
       {m.ferramentas && <Ferramentas usos={m.ferramentas} />}
       {m.texto ? (
         <Markdown texto={m.texto} />
@@ -139,6 +142,7 @@ export function Bolha({
           {m.erro}
         </p>
       )}
+      </div>
     </motion.div>
   );
 }

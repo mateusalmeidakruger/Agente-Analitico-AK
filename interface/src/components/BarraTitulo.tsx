@@ -1,4 +1,5 @@
 import { IconLayoutSidebar } from "@tabler/icons-react";
+import { Avatar } from "@/components/Avatar";
 import type { StatusBase } from "@/lib/tipos";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +43,8 @@ export function BarraTitulo({
         <IconLayoutSidebar className="h-[18px] w-[18px]" stroke={1.6} />
       </button>
 
-      <h1 className="pointer-events-none absolute left-1/2 -translate-x-1/2 truncate text-[13px] font-semibold text-texto max-sm:hidden">
+      <h1 className="pointer-events-none absolute left-1/2 flex -translate-x-1/2 items-center gap-2 truncate text-[13px] font-semibold text-texto max-sm:hidden">
+        <Avatar tamanho={22} />
         Agente Analítico AK
       </h1>
 

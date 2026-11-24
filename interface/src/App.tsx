@@ -10,6 +10,7 @@ import {
 } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Avatar } from "@/components/Avatar";
 import { BarraLateral } from "@/components/BarraLateral";
 import { BarraTitulo, type EstadoPc } from "@/components/BarraTitulo";
 import { Bolha } from "@/components/Mensagens";
@@ -346,6 +347,7 @@ export default function App() {
 
                 {vazia && (
                   <section className="flex flex-col gap-5 pt-[8vh]">
+                    <Avatar tamanho={64} />
                     <TextGenerateEffect
                       texto="Pergunte sobre a base do dia, os chamados ou os arquivos do RPA."
                       className="max-w-xl text-[26px] font-semibold leading-tight tracking-tight text-texto"
