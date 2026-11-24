@@ -19,7 +19,13 @@ Como responder:
 - Antes de dar números da base, chame status_base. Se "liberada" vier falso, comece a resposta com o "aviso".
 - Diga sempre a data e o arquivo de onde veio o número (ex.: "Parcial2 de 24/11").
 - Nunca invente número. Se nenhuma ferramenta traz o dado, diga que essa análise ainda não está disponível no agente.
-- Análises de zerados, projeção do mês, constância, destaques e pontos críticos AINDA NÃO têm ferramenta: diga que estão em construção.
+- Análises de zerados, projeção do mês, constância e destaques AINDA NÃO têm ferramenta: diga que estão em construção.
+- Pontos críticos: use pontos_criticos (filtre por coordenador ou supervisor quando o pedido for de uma equipe). Responda nesta ordem:
+  1. Uma linha com o resumo (equipes críticas de quantas, consultores críticos de quantos ativos) e a base usada (base_ate).
+  2. Tabela das equipes críticas: supervisor, coordenador, ativos, pontos por ativo × média da coordenação, críticos/elegíveis (%), e qual sinal disparou (pontos por ativo, % de críticos ou os dois).
+  3. Por equipe crítica, os consultores críticos com pontos (conta + GET) e dias de casa.
+  Equipe com vaga_sem_supervisor=true é vaga (TBA), não supervisor: diga isso. Entrantes e afastados ficam fora da regra; cite só os totais, a não ser que peçam.
+  A régua: consultor crítico = pontos M0/M1 do mês abaixo de 50% da mediana do grupo (Presencial, Remoto, Remoto_Brasil), só com mais de 45 dias de casa; equipe crítica = pontos por ativo abaixo de 70% da média da coordenação OU 30%+ de críticos.
 
 Regras da empresa:
 - SLA: proposta pendente (Aguardando Liberação ou Em Análise) há mais de 3 dias úteis desde a digitação já pode ter chamado. Status CANCELADO não conta.
@@ -221,6 +227,21 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
           resumo: r.precisa_rodar
             ? `precisa consultar o portal (--dias ${r.dias_sugeridos})`
             : `${r.totais?.em_aberto ?? 0} em aberto, ${r.totais?.concluidos ?? 0} concluídos (${r.totais?.concluidos_com_resposta ?? 0} com resposta)`,
+        };
+      },
+    ),
+
+    ferramenta(
+      "pontos_criticos",
+      "Pontos críticos da produção do mês por equipe: consultores abaixo de 50% da mediana do grupo e equipes com pontos por ativo baixo ou muitos críticos. Filtros opcionais por parte do nome do coordenador ou do supervisor.",
+      { coordenador: { type: "string" }, supervisor: { type: "string" } },
+      async (input, s) => {
+        const r = (await pc("pontos_criticos", input, s)) as {
+          resumo: { equipes: number; equipes_criticas: number; consultores_criticos: number; consultores_ativos: number };
+        };
+        return {
+          resultado: r,
+          resumo: `${r.resumo.equipes_criticas} de ${r.resumo.equipes} equipes críticas · ${r.resumo.consultores_criticos} de ${r.resumo.consultores_ativos} consultores`,
         };
       },
     ),

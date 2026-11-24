@@ -12,7 +12,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
-from nucleo import arquivos, base_do_dia, chamados, conversas, scripts
+from nucleo import analises, arquivos, base_do_dia, chamados, conversas, scripts
 from nucleo.config import Config
 from nucleo.erros import ErroAgente
 
@@ -144,6 +144,20 @@ def consultar_chamados_portal(desde: str | None = None, ate: str | None = None, 
     guardada não cobre o período, volta precisa_rodar=true com os dias certos para rodar_script.
     """
     return _limpo(chamados.consultar_portal(cfg, desde, ate, cnpj, status))
+
+
+# ---------- análises ----------
+
+@ferramenta(leitura=True)
+def pontos_criticos(coordenador: str | None = None, supervisor: str | None = None) -> dict:
+    """Pontos críticos da produção do mês, por equipe (supervisor).
+
+    Consultor crítico: ativo com mais de 45 dias de casa e pontos M0/M1 do mês (Conta + GET, sem M2)
+    abaixo de 50% da mediana do seu grupo (Presencial, Remoto, Remoto_Brasil). Equipe crítica:
+    pontos por ativo abaixo de 70% da média da coordenação OU 30%+ dos elegíveis críticos.
+    Filtros por parte do nome do coordenador ou do supervisor.
+    """
+    return _limpo(analises.pontos_criticos(cfg, coordenador, supervisor))
 
 
 # ---------- scripts ----------

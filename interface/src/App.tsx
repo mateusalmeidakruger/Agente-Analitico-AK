@@ -1,4 +1,5 @@
 import {
+  IconAlertOctagon,
   IconChartLine,
   IconFolder,
   IconPlayerStopFilled,
@@ -303,6 +304,11 @@ export default function App() {
       icone: <IconShieldCheck className="h-full w-full" stroke={1.6} />,
       aoClicar: () => preencherCaixa("A base de hoje foi liberada?"),
     },
+    {
+      titulo: "Pontos críticos",
+      icone: <IconAlertOctagon className="h-full w-full" stroke={1.6} />,
+      aoClicar: () => preencherCaixa("Quais são os pontos críticos da produção do mês, por equipe?"),
+    },
     { titulo: "Zerados", dica: "em breve", desabilitado: true, icone: <IconUserOff className="h-full w-full" stroke={1.6} />, aoClicar: () => {} },
     { titulo: "Projeção", dica: "em breve", desabilitado: true, icone: <IconChartLine className="h-full w-full" stroke={1.6} />, aoClicar: () => {} },
   ];
@@ -376,7 +382,7 @@ export default function App() {
                     />
                     <p className="max-w-xl text-[14px] leading-relaxed text-texto-2">
                       O agente lê a base validada da Central, os chamados do robô e da planilha ABERTURA DE CHAMADOS, entrega
-                      cópias dos arquivos e roda os scripts liberados. Zerados, projeção, constância e destaques estão em
+                      cópias dos arquivos, aponta os pontos críticos por equipe e roda os scripts liberados. Zerados, projeção, constância e destaques estão em
                       construção.
                     </p>
                     <div className="flex flex-wrap gap-2">

@@ -14,6 +14,7 @@ const NOMES: Record<string, string> = {
   contas_fora_do_sla: "Buscou as contas fora do SLA",
   ler_planilha_chamados: "Leu a planilha de chamados",
   consultar_chamados_portal: "Consultou os chamados do portal",
+  pontos_criticos: "Analisou os pontos críticos",
   listar_scripts: "Listou os scripts",
   rodar_script: "Rodou o script",
   dias_uteis: "Contou os dias úteis",

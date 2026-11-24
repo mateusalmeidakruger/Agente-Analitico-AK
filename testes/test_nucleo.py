@@ -250,3 +250,54 @@ def test_portal_consulta_da_versao_antiga_pede_para_rodar(cfg):
                                "chamados": [{"chamado": "#X", "status": "Concluído"}]}), encoding="utf-8")
     r = chamados.consultar_portal(cfg, hoje=HOJE)
     assert r["precisa_rodar"] and "versão antiga" in r["motivo"]
+
+
+# ---------- pontos críticos ----------
+
+from nucleo import analises  # noqa: E402
+
+
+@pytest.fixture
+def cfg_producao(cfg):
+    ent = cfg.caminho_fluxo(r"Central\Entrada")
+    pd.DataFrame({
+        "Matricula": [1, 2, 3, 4, 5, 6, 7],
+        "NomeUsuario": ["ANA", "BIA", "CAIO", "DUDA", "EDU", "FABI", "GUI"],
+        "Cargo": ["CONSULTOR"] * 6 + ["SUPERVISOR"],
+        "DataAdmissao": ["2025-01-01"] * 4 + ["2026-11-01", "2025-01-01", "2025-01-01"],
+        "DataDesligamento": [None] * 7,
+        "Situacao": [None] * 5 + ["FÉRIAS", None],
+        "Nome_Supervisor": ["SUP A", "SUP A", "SUP B", "SUP B", "SUP B", "SUP A", "SUP A"],
+        "Nome_Coordenador": ["COORD"] * 7,
+    }).to_excel(ent / "Usuarios" / "Usuarios_Atual.xlsx", index=False)
+    (cfg.raiz_fluxo / "Central" / "Parcial").mkdir(parents=True, exist_ok=True)
+    pd.DataFrame({
+        "Matricula": [1, 1, 2, 3, 3, 4],
+        "Tipo_Consultor": ["Presencial"] * 6,
+        "Produto": ["CONTA_CORRENTE_PJ", "CREDENCIAMENTO", "CONTA_CORRENTE_PJ", "CONTA_CORRENTE_PJ",
+                    "CONTA_CORRENTE_PJ_M2", "CONTA_CORRENTE_PJ"],
+        "Pontos": [20, 10, 30, 2, 50, 40],
+        "DataBase": ["2026-11-20"] * 6,
+    }).to_excel(cfg.raiz_fluxo / "Central" / "Parcial" / "Producao do Mes.xlsx", index=False)
+    return cfg
+
+
+def test_pontos_criticos_regras(cfg_producao):
+    r = analises.pontos_criticos(cfg_producao, hoje=HOJE)
+    # elegíveis: ANA 30, BIA 30, CAIO 2 (M2 não conta), DUDA 40 → mediana 30, corte 15
+    assert r["medianas_por_grupo"] == {"Presencial": 30.0}
+    criticos = {c["nome"] for e in r["equipes"] for c in e["consultores_criticos"]}
+    assert criticos == {"CAIO"}
+    assert r["resumo"]["entrantes_fora_da_regra"] == 1  # EDU, 23 dias de casa
+    assert r["resumo"]["afastados_fora_da_regra"] == 1  # FABI de férias
+    b = next(e for e in r["equipes"] if e["supervisor"] == "SUP B")
+    # SUP B: 3 ativos (EDU entra no denominador), 42 pts → 14/ativo; coordenação 102/5 = 20,4 → corte 14,28
+    assert b["pontos_por_ativo"] == 14.0 and b["sinal_pontos_por_ativo"]
+    assert b["pct_criticos"] == 50 and b["critica"]
+    a = next(e for e in r["equipes"] if e["supervisor"] == "SUP A")
+    assert not a["critica"]
+
+
+def test_pontos_criticos_filtro_sem_resultado(cfg_producao):
+    with pytest.raises(Exception, match="nenhuma equipe"):
+        analises.pontos_criticos(cfg_producao, coordenador="NINGUEM", hoje=HOJE)
