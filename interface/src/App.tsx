@@ -71,10 +71,39 @@ export default function App() {
   const [lateralAberta, setLateralAberta] = useState(() => window.innerWidth >= 768);
   const [preencher, setPreencher] = useState<{ texto: string; n: number }>();
   const [aviso, setAviso] = useState<string | null>(null);
+  const [diagnostico, setDiagnostico] = useState<string | null>(null);
   const arquivos = useRef(new Map<string, string>());
   const [prontos, setProntos] = useState(new Set<string>());
   const controle = useRef<AbortController | null>(null);
   const fim = useRef<HTMLDivElement>(null);
+
+  // liga no PC: primeiro lista os servidores que a página enxerga, depois chama o ak_local
+  const conectar = useCallback(async (m: Mcp, vivo: () => boolean = () => true) => {
+    setPc("verificando");
+    setCarregandoLista(true);
+    let servidores = "?";
+    try {
+      const l = await m.listTools();
+      servidores = l.servers.map((s) => `${s.server} (${s.authStatus})`).join(", ") || "nenhum";
+    } catch (e) {
+      servidores = `listTools falhou: ${codigoErro(e)}`;
+    }
+    try {
+      const [st, lista] = await Promise.all([chamarPc(m, "status_base"), chamarPc(m, "listar_conversas")]);
+      if (!vivo()) return;
+      setBase(st as StatusBase);
+      setConversas(lista as ResumoConversa[]);
+      setPc("conectado");
+      setDiagnostico(null);
+    } catch (e) {
+      if (!vivo()) return;
+      setPc("desconectado");
+      const msg = typeof e === "object" && e && "message" in e ? String((e as { message: string }).message) : String(e);
+      setDiagnostico(`Erro ${codigoErro(e)}: ${msg} · Servidores visíveis: ${servidores}`);
+    } finally {
+      if (vivo()) setCarregandoLista(false);
+    }
+  }, []);
 
   // capabilities: o Claude (sample), o PC e o Microsoft 365 (mcp) e o botão Baixar (downloads)
   useEffect(() => {
@@ -88,22 +117,11 @@ export default function App() {
       setSemClaude(!s);
       if (!m) {
         setPc("desconectado");
+        setDiagnostico("A página não recebeu a capability mcp (claude.use(\"mcp\") voltou vazio).");
         setCarregandoLista(false);
         return;
       }
-      try {
-        const [st, lista] = await Promise.all([chamarPc(m, "status_base"), chamarPc(m, "listar_conversas")]);
-        if (!vivo) return;
-        setBase(st as StatusBase);
-        setConversas(lista as ResumoConversa[]);
-        setPc("conectado");
-      } catch (e) {
-        if (!vivo) return;
-        setPc("desconectado");
-        if (codigoErro(e) === "cancelled") setAviso("O app pediu confirmação para falar com o PC e ela foi recusada.");
-      } finally {
-        if (vivo) setCarregandoLista(false);
-      }
+      await conectar(m, () => vivo);
     })();
     return () => {
       vivo = false;
@@ -307,6 +325,18 @@ export default function App() {
                     O PC não respondeu. O chat funciona, mas sem a base, os chamados, os arquivos e os scripts. Para ligar,
                     abra o agente no app desktop do Claude com o servidor <span className="font-mono text-[12px]">ak_local</span> em
                     execução (Configurações → Desenvolvedor).
+                    {diagnostico && (
+                      <span className="mt-2 block break-words font-mono text-[11.5px] text-texto-3">{diagnostico}</span>
+                    )}
+                    {mcp && (
+                      <button
+                        type="button"
+                        onClick={() => conectar(mcp)}
+                        className="mt-2 block rounded-full border border-borda bg-janela px-3 py-1 text-[12px] text-texto hover:border-azul hover:text-azul"
+                      >
+                        Tentar conectar de novo
+                      </button>
+                    )}
                   </p>
                 )}
 
