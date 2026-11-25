@@ -17,7 +17,7 @@ Fica em `servidor\`. O Artifact do chat (app desktop do Claude) chama estas ferr
 | `consultar_cnpj`, `contas_fora_do_sla` | Chamados do RPA + situação na Parcial2; fora do SLA = pendente há mais de 3 dias úteis desde a digitação (CANCELADO não conta) |
 | `consultar_chamados_portal` | Última consulta do RPA Consulta Chamados (em aberto + concluídos desde 00:00 de hoje - N); avisa quantos `--dias` rodar quando a consulta não cobre o período |
 | `pontos_criticos` | Régua das skills (gatilhoak): consultor contra o gatilho do mês de casa (Conta E GET, só M0/M1), supervisor 160/120 (Remoto 300/120), coordenador Presencial 22/15 por dias equivalentes; tudo no ritmo do mês (gatilho × DU passados ÷ DU do mês). Crítico < 50% do ritmo; experiência fora da régua; alertas de integridade |
-| `listar_rotinas`, `salvar_rotina`, `apagar_rotina`, `marcar_rotina_executada` | Rotinas da aba Agendamentos em `dadosgendamentos.json` (dias, hora, pedido ao agente); avisam no sino com o agente aberto |
+| `listar_rotinas`, `salvar_rotina`, `apagar_rotina`, `marcar_rotina_executada` | Rotinas da aba Agendamentos em `dados\agendamentos.json` (dias, hora, pedido ao agente); avisam no sino com o agente aberto |
 | `tarefas_do_pc` | Tarefas AK do Agendador do Windows (só leitura, `schtasks /query`) |
 | `listar_skills`, `ler_skill` | Skills da AK em `conhecimento\` (contextoak, producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak, textos-comparativo-fve, diaria-relatorio-ak, parcial-consolidada-ak-v2); o agente lê a skill certa antes de cada análise |
 | `entregar_gerado` | Entrega (Baixar) um arquivo recém-gerado, só das pastas de saída (`pastas_entrega` do config) |
@@ -77,6 +77,7 @@ Rodam como scripts nível 2 do agente (`rodar_script`), e também direto pelo te
 | `parcial_consolidada.py` | parcial-consolidada-ak-v2 | Script validado da skill: Produção Conta PJ × FVE AK+JGK do mês, sem a lista Fora (`--fora`, obrigatória). Grava em `Downloads\Diária`. Para e pede quando falta arquivo ou o FVE veio em notação científica. |
 
 ```
-.venv\Scripts\python geradoreselatorio_diario.py
+.venv\Scripts\python geradores
+elatorio_diario.py
 .venv\Scripts\python geradores\parcial_consolidada.py --fora "C:\...\Lista Fora Novembro.xlsx"
 ```
