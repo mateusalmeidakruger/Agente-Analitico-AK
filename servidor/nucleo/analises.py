@@ -9,7 +9,8 @@ Mês em andamento: compara com o RITMO do gatilho até hoje = gatilho × DU pass
 Crítico: abaixo de 50% do ritmo em Conta ou em GET. Atenção: abaixo do ritmo. No ritmo: os dois em dia.
 Experiência (< 90 dias) fica fora da régua mas aparece; férias aparecem com selo; licença fica fora; produção de desligado
 e matrícula órfã entram nos totais e viram alerta (cruzamentodiariaak).
-Premissa sem skill: Tipo_Consultor Remoto_Brasil usa a tabela de consultor do Remoto.
+Remoto_Brasil (remotos em equipes presenciais) usa a tabela de consultor do Presencial: decisão do
+Mateus em 25/11, em linha com a diaria-relatorio-ak, que os conta na operação presencial.
 """
 import calendar
 from datetime import date, timedelta
@@ -58,7 +59,7 @@ def _mes_de_casa(admissao, hoje):
 
 
 def _gatilho_consultor(projeto, mes_casa):
-    tabela = GATILHO_CONSULTOR["Remoto" if projeto in ("Remoto", "Remoto_Brasil") else "Presencial"]
+    tabela = GATILHO_CONSULTOR["Remoto" if projeto == "Remoto" else "Presencial"]  # Remoto_Brasil = Presencial
     if mes_casa is None or mes_casa >= 4:
         return tabela[2]
     return tabela[0] if mes_casa <= 1 else tabela[1]
@@ -223,7 +224,7 @@ def pontos_criticos(cfg, coordenador=None, supervisor=None, hoje=None):
         "du_passados": du_passados, "du_mes": du_total,
         "regua": {
             "consultor": "gatilho Regra 2 (Conta E GET, só M0/M1) pelo mês de casa; Presencial 12/4 · 14/8 · 16/12, "
-                         "Remoto 12/4 · 16/6 · 20/8 (Remoto_Brasil usa a do Remoto: premissa, não está na skill)",
+                         "Remoto 12/4 · 16/6 · 20/8 (Remoto_Brasil usa a do Presencial)",
             "supervisor": "soma absoluta da equipe, só M0/M1: Presencial 160/120, Remoto 300/120",
             "coordenador": "Presencial: produtividade 22/15 com M2 ÷ dias equivalentes; Remoto: 300/120 absoluto",
             "ritmo": f"mês em andamento: gatilho × {du_passados}/{du_total} DU; crítico < {int(CORTE_CRITICO * 100)}% "

@@ -370,3 +370,10 @@ def test_skills_listadas_com_descricao_e_leitura():
     assert "Plano de Ação" in texto and len(texto) < 28_000
     with pytest.raises(conhecimento.ErroAgente):
         conhecimento.ler("../config")
+
+
+def test_remoto_brasil_usa_gatilho_do_presencial():
+    assert analises._gatilho_consultor("Remoto_Brasil", 5) == (16, 12)
+    assert analises._gatilho_consultor("Remoto", 5) == (20, 8)
+    assert analises._gatilho_consultor("Presencial", 1) == (12, 4)
+    assert analises._gatilho_consultor("Remoto", 2) == (16, 6)
