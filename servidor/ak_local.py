@@ -202,7 +202,7 @@ def listar_skills() -> dict:
 
 @ferramenta(leitura=True)
 def ler_skill(nome: str) -> str:
-    """Texto completo de uma skill da AK (contextoak, producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak, textos-comparativo-fve)."""
+    """Texto completo de uma skill da AK (contextoak, producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak, textos-comparativo-fve, diaria-relatorio-ak, parcial-consolidada-ak-v2)."""
     return conhecimento.ler(nome)
 
 

@@ -362,7 +362,9 @@ from nucleo import conhecimento  # noqa: E402
 
 def test_skills_listadas_com_descricao_e_leitura():
     itens = {i["nome"]: i["descricao"] for i in conhecimento.listar()}
-    assert {"contextoak", "producaoak", "usuariosak", "gatilhoak", "fveak"} <= set(itens)
+    assert {"contextoak", "producaoak", "usuariosak", "gatilhoak", "fveak",
+            "diaria-relatorio-ak", "parcial-consolidada-ak-v2"} <= set(itens)
+    assert "Parcial Consolidada" in itens["parcial-consolidada-ak-v2"]
     assert "Almeida Kruger" in itens["contextoak"]
     texto = conhecimento.ler("gatilhoak")
     assert "Plano de Ação" in texto and len(texto) < 28_000

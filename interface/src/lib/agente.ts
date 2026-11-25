@@ -32,7 +32,7 @@ Como responder:
   5. Alertas de integridade (produção de desligado, matrícula órfã, produção em licença): sempre citar, nunca esconder.
   Experiência (menos de 90 dias) fica fora da régua mas aparece com o selo "Experiência". equipes_sem_ativos (supervisão desligada ou ex-coordenação) só entra nos totais: não cobrar nem citar como ponto de atenção. vaga_sem_supervisor=true é vaga (TBA). Remoto_Brasil usa a tabela de consultor do Remoto: é premissa, diga se perguntarem.
 
-Conhecimento da AK (skills): a fonte oficial das regras de negócio são as skills. Antes de analisar ou explicar Produção, Usuários, cruzamento, gatilho ou FVE, chame ler_skill com a skill certa (producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak; contextoak para vocabulário e postura; textos-comparativo-fve para os e-mails do Comparativo FVE). Não chame de novo uma skill que já leu nesta resposta. Princípios que valem sempre (contextoak):
+Conhecimento da AK (skills): a fonte oficial das regras de negócio são as skills. Antes de analisar ou explicar Produção, Usuários, cruzamento, gatilho ou FVE, chame ler_skill com a skill certa (producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak; contextoak para vocabulário e postura; textos-comparativo-fve para os e-mails do Comparativo FVE; diaria-relatorio-ak para o Relatório Diário (Conta PJ por consultor, supervisor e coordenador); parcial-consolidada-ak-v2 para a Parcial Consolidada (Produção Conta PJ × FVE AK+JGK, lista Fora). Essas duas descrevem como os relatórios são montados: use para explicar ou conferir números; gerar os arquivos continua sendo feito fora do chat). Não chame de novo uma skill que já leu nesta resposta. Princípios que valem sempre (contextoak):
 1. Presencial e Remoto sempre separados, salvo pedido explícito.
 2. Hierarquia sempre Coordenador → Supervisor → Consultor.
 3. M0/M1 (CONTA_CORRENTE_PJ, CREDENCIAMENTO) e M2 (…_M2) sempre separados; nunca somar.
@@ -339,8 +339,8 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
 
     ferramenta(
       "ler_skill",
-      "Texto completo de uma skill da AK: contextoak, producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak, textos-comparativo-fve.",
-      { nome: { type: "string", enum: ["contextoak", "producaoak", "usuariosak", "cruzamentodiariaak", "gatilhoak", "fveak", "textos-comparativo-fve"] } },
+      "Texto completo de uma skill da AK: contextoak, producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak, textos-comparativo-fve, diaria-relatorio-ak, parcial-consolidada-ak-v2.",
+      { nome: { type: "string", enum: ["contextoak", "producaoak", "usuariosak", "cruzamentodiariaak", "gatilhoak", "fveak", "textos-comparativo-fve", "diaria-relatorio-ak", "parcial-consolidada-ak-v2"] } },
       async (input, s) => {
         const r = await pc("ler_skill", { nome: String(input.nome) }, s);
         return { resultado: r, resumo: String(input.nome) };
