@@ -16,7 +16,7 @@ Fica em `servidor\`. O Artifact do chat (app desktop do Claude) chama estas ferr
 | `listar_arquivos`, `buscar_arquivo` | Cópia (inteira ou recortada por filtro) dos arquivos do RPA, em `dados\arquivos_entregues`; CPF e nascimento saem removidos por padrão |
 | `consultar_cnpj`, `contas_fora_do_sla` | Chamados do RPA + situação na Parcial2; fora do SLA = pendente há mais de 3 dias úteis desde a digitação (CANCELADO não conta) |
 | `consultar_chamados_portal` | Última consulta do RPA Consulta Chamados (em aberto + concluídos desde 00:00 de hoje - N); avisa quantos `--dias` rodar quando a consulta não cobre o período |
-| `pontos_criticos` | Produção do mês por equipe: consultor crítico < 50% da mediana do grupo (ativos com mais de 45 dias); equipe crítica = pontos por ativo < 70% da média da coordenação ou 30%+ de críticos |
+| `pontos_criticos` | Régua das skills (gatilhoak): consultor contra o gatilho do mês de casa (Conta E GET, só M0/M1), supervisor 160/120 (Remoto 300/120), coordenador Presencial 22/15 por dias equivalentes; tudo no ritmo do mês (gatilho × DU passados ÷ DU do mês). Crítico < 50% do ritmo; experiência fora da régua; alertas de integridade |
 | `listar_rotinas`, `salvar_rotina`, `apagar_rotina`, `marcar_rotina_executada` | Rotinas da aba Agendamentos em `dadosgendamentos.json` (dias, hora, pedido ao agente); avisam no sino com o agente aberto |
 | `tarefas_do_pc` | Tarefas AK do Agendador do Windows (só leitura, `schtasks /query`) |
 | `listar_skills`, `ler_skill` | Skills da AK em `conhecimento\` (contextoak, producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak, textos-comparativo-fve); o agente lê a skill certa antes de cada análise |

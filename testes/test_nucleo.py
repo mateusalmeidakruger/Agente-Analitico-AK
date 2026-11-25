@@ -252,7 +252,7 @@ def test_portal_consulta_da_versao_antiga_pede_para_rodar(cfg):
     assert r["precisa_rodar"] and "versão antiga" in r["motivo"]
 
 
-# ---------- pontos críticos ----------
+# ---------- pontos críticos (régua das skills: gatilho) ----------
 
 from nucleo import analises  # noqa: E402
 
@@ -262,40 +262,59 @@ def cfg_producao(cfg):
     ent = cfg.caminho_fluxo(r"Central\Entrada")
     pd.DataFrame({
         "Matricula": [1, 2, 3, 4, 5, 6, 7],
-        "NomeUsuario": ["ANA", "BIA", "CAIO", "DUDA", "EDU", "FABI", "GUI"],
+        "NomeUsuario": ["ANA", "BIA", "CAIO", "DUDA", "EDU", "FABI", "SUP"],
         "Cargo": ["CONSULTOR"] * 6 + ["SUPERVISOR"],
-        "DataAdmissao": ["2025-01-01"] * 4 + ["2026-11-01", "2025-01-01", "2025-01-01"],
+        "DataAdmissao": ["2025-01-01", "2025-01-01", "2025-01-01", "2026-10-01", "2025-01-01", "2025-01-01", "2024-01-01"],
         "DataDesligamento": [None] * 7,
-        "Situacao": [None] * 5 + ["FÉRIAS", None],
-        "Nome_Supervisor": ["SUP A", "SUP A", "SUP B", "SUP B", "SUP B", "SUP A", "SUP A"],
+        "Situacao": [None, None, None, None, "FÉRIAS", "AFASTAMENTO", None],
+        "Nome_Supervisor": ["SUP A", "SUP A", "SUP B", "SUP B", "SUP A", "SUP B", "SUP A"],
         "Nome_Coordenador": ["COORD"] * 7,
+        "DiasTrabalhados": [14, 14, 14, 14, 7, 0, 14],
     }).to_excel(ent / "Usuarios" / "Usuarios_Atual.xlsx", index=False)
     (cfg.raiz_fluxo / "Central" / "Parcial").mkdir(parents=True, exist_ok=True)
+    linhas = [  # (matricula, produto, pontos)
+        (1, "CONTA_CORRENTE_PJ", 20), (1, "CREDENCIAMENTO", 10),
+        (2, "CONTA_CORRENTE_PJ", 10), (2, "CREDENCIAMENTO", 10),
+        (3, "CONTA_CORRENTE_PJ", 2), (3, "CONTA_CORRENTE_PJ_M2", 50),
+        (6, "CONTA_CORRENTE_PJ", 5),
+        (99, "CONTA_CORRENTE_PJ", 8),
+    ]
     pd.DataFrame({
-        "Matricula": [1, 1, 2, 3, 3, 4],
-        "Tipo_Consultor": ["Presencial"] * 6,
-        "Produto": ["CONTA_CORRENTE_PJ", "CREDENCIAMENTO", "CONTA_CORRENTE_PJ", "CONTA_CORRENTE_PJ",
-                    "CONTA_CORRENTE_PJ_M2", "CONTA_CORRENTE_PJ"],
-        "Pontos": [20, 10, 30, 2, 50, 40],
-        "DataBase": ["2026-11-20"] * 6,
+        "Matricula": [m for m, _, _ in linhas],
+        "NomeExecutivoLegal": ["X" if m != 99 else "ORFAO" for m, _, _ in linhas],
+        "NomeSupervisor": ["SUP VELHO" if m == 99 else "?" for m, _, _ in linhas],
+        "NomeCoordenador": ["COORD VELHO" if m == 99 else "?" for m, _, _ in linhas],
+        "Tipo_Consultor": ["Presencial"] * len(linhas),
+        "Produto": [pr for _, pr, _ in linhas],
+        "Pontos": [pt for _, _, pt in linhas],
+        "DataBase": ["2026-11-20"] * len(linhas),
     }).to_excel(cfg.raiz_fluxo / "Central" / "Parcial" / "Producao do Mes.xlsx", index=False)
     return cfg
 
 
-def test_pontos_criticos_regras(cfg_producao):
+def test_pontos_criticos_pela_regua_do_gatilho(cfg_producao):
+    # 24/11: 14 de 19 DU passados → ritmo do consultor 4º mês+ = 16×14/19 ≈ 11,8 Conta e 12×14/19 ≈ 8,8 GET
+    r = analises.pontos_criticos(cfg_producao, coordenador="COORD", hoje=HOJE)
+    assert (r["du_passados"], r["du_mes"]) == (14, 19)
+    eq = {e["supervisor"]: e for e in r["equipes"]}
+    a, b = eq["SUP A"], eq["SUP B"]
+    # ANA 20/10 no ritmo; BIA 10/10 → 85% em Conta = atenção; EDU de férias e zerado = crítico, com selo
+    assert a["consultores_no_ritmo"] == 1 and a["consultores_atencao"] == 1
+    assert len(a["consultores_criticos"]) == 1 and "EDU" in a["consultores_criticos"][0] and "férias" in a["consultores_criticos"][0]
+    # CAIO: M2 não conta → 2 de Conta = crítico; DUDA tem 54 dias = experiência, fora da régua
+    assert len(b["consultores_criticos"]) == 1 and b["consultores_criticos"][0].startswith("CAIO")
+    assert b["em_experiencia"] == ["DUDA (0/0)"]
+    # supervisor: 160/120 absoluto, só M0/M1 → SUP A tem 30/20 = crítico
+    assert a["gatilho"] == "160/120" and a["faixa"] == "critico"
+    assert r["resumo"]["em_experiencia_fora_da_regua"] == 1
+    assert r["alertas"]["producao_em_licenca"] == ["FABI"]
+
+
+def test_pontos_criticos_supervisao_sem_ativos_e_orfao(cfg_producao):
     r = analises.pontos_criticos(cfg_producao, hoje=HOJE)
-    # elegíveis: ANA 30, BIA 30, CAIO 2 (M2 não conta), DUDA 40 → mediana 30, corte 15
-    assert r["medianas_por_grupo"] == {"Presencial": 30.0}
-    criticos = {c["nome"] for e in r["equipes"] for c in e["consultores_criticos"]}
-    assert criticos == {"CAIO"}
-    assert r["resumo"]["entrantes_fora_da_regra"] == 1  # EDU, 23 dias de casa
-    assert r["resumo"]["afastados_fora_da_regra"] == 1  # FABI de férias
-    b = next(e for e in r["equipes"] if e["supervisor"] == "SUP B")
-    # SUP B: 3 ativos (EDU entra no denominador), 42 pts → 14/ativo; coordenação 102/5 = 20,4 → corte 14,28
-    assert b["pontos_por_ativo"] == 14.0 and b["sinal_pontos_por_ativo"]
-    assert b["pct_criticos"] == 50 and b["critica"]
-    a = next(e for e in r["equipes"] if e["supervisor"] == "SUP A")
-    assert not a["critica"]
+    assert {e["supervisor"] for e in r["equipes"]} == {"SUP A", "SUP B"}
+    assert r["equipes_sem_ativos"] == [{"coordenador": "COORD VELHO", "supervisor": "SUP VELHO", "conta": 8.0, "get": 0.0}]
+    assert r["alertas"]["matricula_orfa_com_producao"] == {"total": 1, "primeiros": ["ORFAO"]}
 
 
 def test_pontos_criticos_filtro_sem_resultado(cfg_producao):

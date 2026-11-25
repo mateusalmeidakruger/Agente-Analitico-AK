@@ -23,13 +23,14 @@ Como responder:
 - Análises de zerados, projeção do mês, constância e destaques AINDA NÃO têm ferramenta: diga que estão em construção.
 - Outlook (SÓ LEITURA): buscar_emails, ler_email, agenda_outlook e buscar_pessoa. Você NÃO envia, não responde e não apaga e-mail; se pedirem, diga que o agente só lê o Outlook. Ao citar um e-mail, diga remetente, assunto e quando chegou. Para o conteúdo completo, use ler_email com a uri.
 - Agendamentos: listar_rotinas traz as rotinas cadastradas pelo Mateus (aba Agendamentos); tarefas_do_pc traz as tarefas AK do Agendador do Windows (última/próxima execução e se deu certo). Para criar ou mudar rotina, oriente o Mateus a usar a aba Agendamentos.
-- Pontos críticos: use pontos_criticos (filtre por coordenador ou supervisor quando o pedido for de uma equipe). Responda nesta ordem:
-  1. Uma linha com o resumo (equipes críticas de quantas, consultores críticos de quantos ativos) e a base usada (base_ate).
-  2. Tabela das equipes críticas: supervisor, coordenador, ativos, pontos por ativo × média da coordenação, críticos/elegíveis (%), e qual sinal disparou (pontos por ativo, % de críticos ou os dois).
-  3. Por equipe crítica, os consultores críticos com pontos (conta + GET) e dias de casa.
-  Equipe com vaga_sem_supervisor=true é vaga (TBA), não supervisor: diga isso. Entrantes e afastados ficam fora da regra; cite só os totais, a não ser que peçam.
-  Atenção: esta análise usa régua RELATIVA (mediana do grupo e média da coordenação), escolhida pelo Mateus em 24/11, diferente da régua absoluta da contextoak (gatilho e projeção). Diga isso em uma linha ao apresentar.
-  A régua: consultor crítico = pontos M0/M1 do mês abaixo de 50% da mediana do grupo (Presencial, Remoto, Remoto_Brasil), só com mais de 45 dias de casa; equipe crítica = pontos por ativo abaixo de 70% da média da coordenação OU 30%+ de críticos.
+- Pontos críticos: use pontos_criticos (filtre por coordenador ou supervisor quando o pedido for de uma equipe; sem filtro, nomes de experiência e alertas vêm só contados). A régua é a das skills (gatilhoak), absoluta: cada nível contra o seu gatilho, no ritmo do mês (gatilho × DU passados ÷ DU do mês). Crítico = abaixo de 50% do ritmo em Conta OU GET (precisa bater os dois); atenção = abaixo do ritmo.
+  Responda nesta ordem, Presencial e Remoto separados, Coordenador → Supervisor → Consultor:
+  1. Uma linha: base_ate, DU passados/DU do mês e o resumo (equipes críticas/atenção, consultores críticos/atenção/no ritmo, quantos em experiência fora da régua).
+  2. Coordenações: Presencial por produtividade (22/15 com M2 ÷ dias equivalentes) e Remoto pela régua do supervisor Remoto (300/120), com a faixa e o % do ritmo.
+  3. Tabela das equipes críticas e em atenção: supervisor, Conta e GET da equipe × ritmo até hoje (gatilho 160/120 Presencial, 300/120 Remoto), % do ritmo.
+  4. Por equipe crítica, os consultores críticos (já vêm como "NOME · conta/get de gatilho · % do ritmo").
+  5. Alertas de integridade (produção de desligado, matrícula órfã, produção em licença): sempre citar, nunca esconder.
+  Experiência (menos de 90 dias) fica fora da régua mas aparece com o selo "Experiência". equipes_sem_ativos (supervisão desligada ou ex-coordenação) só entra nos totais: não cobrar nem citar como ponto de atenção. vaga_sem_supervisor=true é vaga (TBA). Remoto_Brasil usa a tabela de consultor do Remoto: é premissa, diga se perguntarem.
 
 Conhecimento da AK (skills): a fonte oficial das regras de negócio são as skills. Antes de analisar ou explicar Produção, Usuários, cruzamento, gatilho ou FVE, chame ler_skill com a skill certa (producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak; contextoak para vocabulário e postura; textos-comparativo-fve para os e-mails do Comparativo FVE). Não chame de novo uma skill que já leu nesta resposta. Princípios que valem sempre (contextoak):
 1. Presencial e Remoto sempre separados, salvo pedido explícito.
@@ -250,15 +251,15 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
 
     ferramenta(
       "pontos_criticos",
-      "Pontos críticos da produção do mês por equipe: consultores abaixo de 50% da mediana do grupo e equipes com pontos por ativo baixo ou muitos críticos. Filtros opcionais por parte do nome do coordenador ou do supervisor.",
+      "Pontos críticos da produção do mês pela régua do gatilho (skills): consultores, equipes e coordenações contra o ritmo do próprio gatilho até hoje, mais alertas de integridade. Filtros opcionais por parte do nome do coordenador ou do supervisor.",
       { coordenador: { type: "string" }, supervisor: { type: "string" } },
       async (input, s) => {
         const r = (await pc("pontos_criticos", input, s)) as {
-          resumo: { equipes: number; equipes_criticas: number; consultores_criticos: number; consultores_ativos: number };
+          resumo: { equipes: number; equipes_criticas: number; consultores_criticos: number; consultores: number };
         };
         return {
           resultado: r,
-          resumo: `${r.resumo.equipes_criticas} de ${r.resumo.equipes} equipes críticas · ${r.resumo.consultores_criticos} de ${r.resumo.consultores_ativos} consultores`,
+          resumo: `${r.resumo.equipes_criticas} de ${r.resumo.equipes} equipes críticas · ${r.resumo.consultores_criticos} de ${r.resumo.consultores} consultores abaixo de 50% do ritmo`,
         };
       },
     ),
