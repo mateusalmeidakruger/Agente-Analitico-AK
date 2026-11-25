@@ -30,7 +30,7 @@ export function BarraTitulo({
     : null;
 
   return (
-    <header className="relative flex h-12 shrink-0 items-center gap-3 border-b border-borda bg-barra px-4 backdrop-blur-xl">
+    <header className="relative z-30 flex h-12 shrink-0 items-center gap-3 border-b border-borda bg-barra px-4 backdrop-blur-xl">
       {/* as três bolinhas do macOS: decorativas */}
       <div className="flex items-center gap-2" aria-hidden="true">
         <span className="h-3 w-3 rounded-full bg-[#ff5f57] ring-1 ring-black/10" />
