@@ -39,6 +39,23 @@ class ErroRelatorio(Exception):
     pass
 
 
+def _renomear():
+    """Supervisões renomeadas (relatorio_diario.json): o nome antigo vira o novo nos dados e na aba
+    Por Supervisor. Ex.: a equipe do Eder de Jesus Santos virou "TBA LITORAL NORTE" em 25/11/2026."""
+    cfg = Path(__file__).with_suffix(".json")
+    if not cfg.exists():
+        return {}
+    return {k.strip(): v.strip() for k, v in json.loads(cfg.read_text(encoding="utf-8")).get("renomear_supervisores", {}).items()}
+
+
+RENOMEAR = _renomear()
+
+
+def nome_sup(n):
+    n = "" if n is None or (isinstance(n, float) and n != n) else str(n).strip()
+    return RENOMEAR.get(n, n)
+
+
 def mat(v):
     if v is None or (isinstance(v, float) and v != v):
         return ""
@@ -81,7 +98,7 @@ def estrutura(anterior):
     for sub in sub_rows:
         bloco = [r for r in sup_rows if inicio <= r < sub]
         nome_coord = next((linhas[r]["A"]["valor"].strip() for r in bloco if linhas[r].get("A", {}).get("valor")), "")
-        coords.append({"coordenador": nome_coord, "supervisores": [linhas[r]["B"]["valor"].strip() for r in bloco],
+        coords.append({"coordenador": nome_coord, "supervisores": [nome_sup(linhas[r]["B"]["valor"]) for r in bloco],
                        "linhas": bloco, "subtotal": sub})
         inicio = sub + 1
     return {"coordenadores": coords, "total": total_row}
@@ -117,6 +134,7 @@ def calcular(producao, usuarios, est, hoje=None):
     validos = {s for c in est["coordenadores"] for s in c["supervisores"]}
 
     p = producao.copy()
+    p["NomeSupervisor"] = p["NomeSupervisor"].map(nome_sup)
     p["mat"] = p["Matricula"].map(mat)
     p["DataBase"] = pd.to_datetime(p["DataBase"], errors="coerce")
     mes = p["DataBase"].max().to_period("M")
@@ -127,6 +145,7 @@ def calcular(producao, usuarios, est, hoje=None):
     corte = pd.to_datetime(p["DataDigitacao"], errors="coerce").max()
 
     u = usuarios.copy()
+    u["Nome_Supervisor"] = u["Nome_Supervisor"].map(nome_sup)
     u["mat"] = u["Matricula"].map(mat)
     u["Cargo"] = u["Cargo"].astype(str).str.upper().str.strip()
     u = u.drop_duplicates("mat")
@@ -293,6 +312,16 @@ def gravar_valor(xml, ref, valor):
     return xml[:m.start()] + novo + xml[m.end():]
 
 
+def gravar_texto(xml, ref, texto):
+    """Troca o texto de uma célula sem fórmula, mantendo o estilo."""
+    m = re.search(rf'<c r="{ref}"(?P<a>[^>]*?)(?:/>|>(?P<i>.*?)</c>)', xml, re.S)
+    if not m:
+        return xml
+    attrs = re.sub(r'\s+t="[^"]*"', "", m.group("a"))
+    novo = f'<c r="{ref}"{attrs} t="inlineStr"><is><t>{escape(texto)}</t></is></c>'
+    return xml[:m.start()] + novo + xml[m.end():]
+
+
 def ler_linhas(xml, sst):
     return {int(r): celulas(corpo, sst) for r, corpo in re.findall(r'<row r="(\d+)"[^>]*>(.*?)</row>', xml, re.S)}
 
@@ -387,7 +416,10 @@ def gravar(anterior, saida, res, est):
         vals, dy = {}, {}
         for bloco in est["coordenadores"]:
             for r in bloco["linhas"]:
-                a = por_sup.get(cel2[r]["B"]["valor"].strip(), zerado())
+                antigo = cel2[r]["B"]["valor"].strip()
+                if nome_sup(antigo) != antigo:
+                    s2 = gravar_texto(s2, f"B{r}", nome_sup(antigo))
+                a = por_sup.get(nome_sup(antigo), zerado())
                 vals[r] = {"E": a["atuando"], **{col: a[orig] for col, orig in POR_SUP.items()}}
                 dy[r] = (fixo(r, "D"), fixo(r, "Y"))
             sub = bloco["subtotal"]

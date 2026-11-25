@@ -411,9 +411,10 @@ RELATORIO_23_11 = Path(r"C:\Users\mateus.ferreira\Documents\Relatório Diária A
 
 
 @pytest.mark.skipif(not (BACKUP_23_11.exists() and RELATORIO_23_11.exists()), reason="base de 23/11 não disponível")
-def test_relatorio_diario_reproduz_o_de_23_11(tmp_path):
+def test_relatorio_diario_reproduz_o_de_23_11(tmp_path, monkeypatch):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "geradores"))
     import relatorio_diario as rd
+    monkeypatch.setattr(rd, "RENOMEAR", {})  # em 23/11 a equipe ainda era do Eder
     codigo = rd.main(["--anterior", str(RELATORIO_23_11), "--producao", str(BACKUP_23_11 / "Producao.xlsx"),
                       "--usuarios", str(BACKUP_23_11 / "Usuarios" / "Usuarios_Atual.xlsx"),
                       "--saida", str(tmp_path), "--resumo", str(tmp_path / "r.json")])
@@ -422,3 +423,19 @@ def test_relatorio_diario_reproduz_o_de_23_11(tmp_path):
     novo = pd.read_excel(r["arquivo"], sheet_name="Conta PJ - Consultor", engine="calamine", header=None)
     orig = pd.read_excel(RELATORIO_23_11, sheet_name="Conta PJ - Consultor", engine="calamine", header=None)
     assert novo.fillna("").astype(str).equals(orig.fillna("").astype(str))
+
+
+@pytest.mark.skipif(not (BACKUP_23_11.exists() and RELATORIO_23_11.exists()), reason="base de 23/11 não disponível")
+def test_relatorio_diario_renomeia_supervisao_sem_mexer_nos_totais(tmp_path, monkeypatch):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "geradores"))
+    import relatorio_diario as rd
+    monkeypatch.setattr(rd, "RENOMEAR", {"EDER DE JESUS SANTOS": "TBA LITORAL NORTE"})
+    rd.main(["--anterior", str(RELATORIO_23_11), "--producao", str(BACKUP_23_11 / "Producao.xlsx"),
+             "--usuarios", str(BACKUP_23_11 / "Usuarios" / "Usuarios_Atual.xlsx"),
+             "--saida", str(tmp_path), "--resumo", str(tmp_path / "r.json")])
+    r = json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
+    # em 23/11 o próprio Eder lançava sob "TBA LITORAL NORTE" (10 pts): com a troca, a linha vira válida
+    assert r["ok"] and r["pontos_digitados"] == 21990.5 + 10
+    ps = pd.read_excel(r["arquivo"], sheet_name="Por Supervisor", engine="calamine", header=None)
+    nomes = set(ps.iloc[:, 1].dropna().astype(str))
+    assert "TBA LITORAL NORTE" in nomes and "EDER DE JESUS SANTOS" not in nomes
