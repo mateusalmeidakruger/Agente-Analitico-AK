@@ -5,6 +5,7 @@ import re
 import subprocess
 from datetime import datetime
 
+from .config import PROJETO
 from .erros import ErroAgente
 
 LIMITE_SAIDA = 20000
@@ -40,7 +41,11 @@ def montar_comando(cfg, nome, opcoes=None):
         if not re.fullmatch(permitidas[chave], str(valor)):
             raise ErroScript(f"valor {valor!r} recusado para {chave}")
         args += [chave, str(valor)]
-    script = cfg.caminho_fluxo(s["caminho"])
+    # "{projeto}\..." = script do próprio agente (geradores); o resto é relativo ao Fluxo VBA Teste
+    if s["caminho"].startswith("{projeto}"):
+        script = PROJETO / s["caminho"].removeprefix("{projeto}").lstrip("\\/")
+    else:
+        script = cfg.caminho_fluxo(s["caminho"])
     if not script.exists():
         raise ErroScript(f"{script} não existe")
     return s, script, [cfg.bruto.get("python_scripts", "python"), str(script), *args]

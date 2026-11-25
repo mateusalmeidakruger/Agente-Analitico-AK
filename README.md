@@ -20,6 +20,7 @@ Fica em `servidor\`. O Artifact do chat (app desktop do Claude) chama estas ferr
 | `listar_rotinas`, `salvar_rotina`, `apagar_rotina`, `marcar_rotina_executada` | Rotinas da aba Agendamentos em `dadosgendamentos.json` (dias, hora, pedido ao agente); avisam no sino com o agente aberto |
 | `tarefas_do_pc` | Tarefas AK do Agendador do Windows (só leitura, `schtasks /query`) |
 | `listar_skills`, `ler_skill` | Skills da AK em `conhecimento\` (contextoak, producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak, textos-comparativo-fve, diaria-relatorio-ak, parcial-consolidada-ak-v2); o agente lê a skill certa antes de cada análise |
+| `entregar_gerado` | Entrega (Baixar) um arquivo recém-gerado, só das pastas de saída (`pastas_entrega` do config) |
 | `listar_scripts`, `rodar_script` | Só o que está em `scripts.json`; nível 3 exige `confirmado=true` e começa desabilitado |
 
 A planilha ABERTURA DE CHAMADOS e o Outlook (e-mails, agenda, diretório) não passam pelo servidor: o Artifact lê pelo conector Microsoft 365, que só tem permissão de leitura.
@@ -65,3 +66,17 @@ Depois feche e abra o app.
 - `servidor\config.json`: caminhos liberados, feriados, regra do SLA.
 - `servidor\scripts.json`: scripts liberados e seus níveis.
 - `dados\` (fora do git): conversas, entregas, logs de scripts, laudos do validador do agente.
+
+## Geradores (`geradores\`)
+
+Rodam como scripts nível 2 do agente (`rodar_script`), e também direto pelo terminal:
+
+| Gerador | Skill | O que faz |
+| --- | --- | --- |
+| `relatorio_diario.py` | diaria-relatorio-ak | Parte do último `Relatório Diário DD.MM.AAAA.xlsx` da pasta Claude outputs, edita o XML (sem recriar), roda as 4 validações da skill e grava ao lado, sem sobrescrever. Se algum supervisor não bater com o portal, sai com "CONFERIR" no nome e código 3. Conferido: refaz o de 23/11 idêntico (416 linhas, Por Supervisor e Por Coordenador 100%) e abre no Excel. |
+| `parcial_consolidada.py` | parcial-consolidada-ak-v2 | Script validado da skill: Produção Conta PJ × FVE AK+JGK do mês, sem a lista Fora (`--fora`, obrigatória). Grava em `Downloads\Diária`. Para e pede quando falta arquivo ou o FVE veio em notação científica. |
+
+```
+.venv\Scripts\python geradoreselatorio_diario.py
+.venv\Scripts\python geradores\parcial_consolidada.py --fora "C:\...\Lista Fora Novembro.xlsx"
+```

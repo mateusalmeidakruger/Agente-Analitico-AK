@@ -7,7 +7,10 @@
       "nivel": 1,
       "habilitado": true,
       "timeout_s": 300,
-      "args_fixos": ["--saida", "{dados}\\validador"],
+      "args_fixos": [
+        "--saida",
+        "{dados}\\validador"
+      ],
       "args_opcoes": {
         "--hoje": "^\\d{4}-\\d{2}-\\d{2}$"
       }
@@ -18,7 +21,9 @@
       "nivel": 1,
       "habilitado": true,
       "timeout_s": 300,
-      "args_fixos": ["--listar"],
+      "args_fixos": [
+        "--listar"
+      ],
       "args_opcoes": {
         "--cnpj": "^\\d{14}$"
       }
@@ -29,8 +34,12 @@
       "nivel": 3,
       "habilitado": false,
       "timeout_s": 600,
-      "args_fixos": ["--enviar"],
-      "args_obrigatorios": ["--cnpj"],
+      "args_fixos": [
+        "--enviar"
+      ],
+      "args_obrigatorios": [
+        "--cnpj"
+      ],
       "args_opcoes": {
         "--cnpj": "^\\d{14}$"
       }
@@ -41,9 +50,36 @@
       "nivel": 2,
       "habilitado": true,
       "timeout_s": 300,
-      "args_fixos": ["--saida", "{dados}\\consulta_chamados\\ultima_consulta.json"],
+      "args_fixos": [
+        "--saida",
+        "{dados}\\consulta_chamados\\ultima_consulta.json"
+      ],
       "args_opcoes": {
         "--dias": "^([0-9]|[1-5][0-9]|60)$"
+      }
+    },
+    "relatorio_diario": {
+      "descricao": "Gera o Relatório Diário AK (skill diaria-relatorio-ak) a partir do último relatório da pasta Claude outputs, com a Produção e a Usuarios_Atual validadas; roda as validações da skill e grava ao lado do anterior sem sobrescrever",
+      "caminho": "{projeto}\\geradores\\relatorio_diario.py",
+      "nivel": 2,
+      "habilitado": true,
+      "timeout_s": 300,
+      "args_fixos": [],
+      "args_opcoes": {}
+    },
+    "parcial_consolidada": {
+      "descricao": "Gera a Parcial Consolidada AK (skill parcial-consolidada-ak-v2): Produção Conta PJ x FVE AK+JGK do mês, sem os CNPJs da lista Fora; grava em Downloads\\Diária sem sobrescrever",
+      "caminho": "{projeto}\\geradores\\parcial_consolidada.py",
+      "nivel": 2,
+      "habilitado": true,
+      "timeout_s": 300,
+      "args_fixos": [],
+      "args_obrigatorios": [
+        "--fora"
+      ],
+      "args_opcoes": {
+        "--fora": "^C:\\\\Users\\\\mateus\\.ferreira\\\\(Downloads|Documents)\\\\[^<>|?*\"]+\\.xlsx$",
+        "--mes": "^\\d{4}-(0[1-9]|1[0-2])$"
       }
     }
   }

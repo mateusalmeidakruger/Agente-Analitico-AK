@@ -377,3 +377,48 @@ def test_remoto_brasil_usa_gatilho_do_presencial():
     assert analises._gatilho_consultor("Remoto", 5) == (20, 8)
     assert analises._gatilho_consultor("Presencial", 1) == (12, 4)
     assert analises._gatilho_consultor("Remoto", 2) == (16, 6)
+
+
+# ---------- geradores ----------
+
+def test_script_do_projeto_resolve_caminho_e_exige_lista_fora():
+    c = Config()
+    _, script, comando = scripts.montar_comando(c, "relatorio_diario")
+    assert script.name == "relatorio_diario.py" and script.parent.name == "geradores" and script.exists()
+    with pytest.raises(scripts.ErroScript, match="exige --fora"):
+        scripts.montar_comando(c, "parcial_consolidada")
+    ok = r"C:\Users\mateus.ferreira\Downloads\Diária\Lista Fora Novembro.xlsx"
+    assert scripts.montar_comando(c, "parcial_consolidada", {"--fora": ok})[2][-1] == ok
+    for ruim in (r"C:\Windows\x.xlsx", r"C:\Users\mateus.ferreira\Downloads\x.exe"):
+        with pytest.raises(scripts.ErroScript):
+            scripts.montar_comando(c, "parcial_consolidada", {"--fora": ruim})
+
+
+def test_entregar_gerado_so_das_pastas_de_saida(cfg, tmp_path):
+    saida = tmp_path / "saida"
+    saida.mkdir()
+    (saida / "Relatório Diário 01.12.2026.xlsx").write_bytes(b"PK teste")
+    cfg.bruto["pastas_entrega"] = [str(saida)]
+    r = arquivos.entregar_gerado(cfg, str(saida / "Relatório Diário 01.12.2026.xlsx"))
+    assert r["nome_arquivo"].startswith("Relatório Diário") and r["conteudo_base64"]
+    for ruim in (str(tmp_path / "fora.xlsx"), str(saida / ".." / "fora.xlsx"), str(saida / "x.exe")):
+        with pytest.raises(arquivos.ErroArquivo):
+            arquivos.entregar_gerado(cfg, ruim)
+
+
+BACKUP_23_11 = Path(r"C:\Users\mateus.ferreira\Documents\Fluxo VBA Teste\Central\backups\2026-11-25_084452\Diaria Comparativo")
+RELATORIO_23_11 = Path(r"C:\Users\mateus.ferreira\Documents\Relatório Diária Atualizado\Comparativo\Claude outputs\Relatório Diário 23.11.2026.xlsx")
+
+
+@pytest.mark.skipif(not (BACKUP_23_11.exists() and RELATORIO_23_11.exists()), reason="base de 23/11 não disponível")
+def test_relatorio_diario_reproduz_o_de_23_11(tmp_path):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "geradores"))
+    import relatorio_diario as rd
+    codigo = rd.main(["--anterior", str(RELATORIO_23_11), "--producao", str(BACKUP_23_11 / "Producao.xlsx"),
+                      "--usuarios", str(BACKUP_23_11 / "Usuarios" / "Usuarios_Atual.xlsx"),
+                      "--saida", str(tmp_path), "--resumo", str(tmp_path / "r.json")])
+    r = json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
+    assert codigo == 0 and r["ok"] and r["linhas"] == 416 and r["pontos_digitados"] == 21990.5
+    novo = pd.read_excel(r["arquivo"], sheet_name="Conta PJ - Consultor", engine="calamine", header=None)
+    orig = pd.read_excel(RELATORIO_23_11, sheet_name="Conta PJ - Consultor", engine="calamine", header=None)
+    assert novo.fillna("").astype(str).equals(orig.fillna("").astype(str))

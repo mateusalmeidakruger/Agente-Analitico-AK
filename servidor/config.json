@@ -2,6 +2,10 @@
   "raiz_fluxo": "C:\\Users\\mateus.ferreira\\Documents\\Fluxo VBA Teste",
   "python_scripts": "python",
   "limite_entrega_mb": 10,
+  "pastas_entrega": [
+    "C:\\Users\\mateus.ferreira\\Documents\\Relatório Diária Atualizado\\Comparativo\\Claude outputs",
+    "C:\\Users\\mateus.ferreira\\Downloads\\Diária"
+  ],
   "sla_dias_uteis": 3,
   "status_pendentes_sla": ["Aguardando Liberacao", "Em Analise"],
   "status_ignorados_sla": ["CANCELADO"],

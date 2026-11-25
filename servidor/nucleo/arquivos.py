@@ -117,3 +117,23 @@ def buscar(cfg, chave, filtros=None, incluir_dados_pessoais=False, com_conteudo=
         else:
             resposta["conteudo_base64"] = base64.b64encode(Path(destino).read_bytes()).decode("ascii")
     return resposta
+
+
+def entregar_gerado(cfg, caminho):
+    """Entrega um arquivo que um gerador acabou de criar (Relatório Diário, Parcial), só das pastas de entrega."""
+    p = Path(caminho).resolve()
+    pastas = [Path(x).resolve() for x in cfg.bruto.get("pastas_entrega", [])]
+    if p.suffix.lower() not in MIME or not any(p.is_relative_to(x) for x in pastas):
+        raise ErroArquivo("só entrego .xlsx/.csv das pastas de saída dos geradores: " + "; ".join(map(str, pastas)))
+    if not p.is_file():
+        raise ErroArquivo(f"{p} não existe")
+    tamanho = p.stat().st_size
+    resposta = {
+        "nome_arquivo": p.name, "caminho_copia": str(p), "origem": str(p), "modificado_origem": _modificado(p),
+        "linhas": None, "tamanho_bytes": tamanho, "mime": MIME[p.suffix.lower()], "dados_pessoais_removidos": [],
+    }
+    if tamanho > cfg.limite_entrega_bytes:
+        resposta["aviso"] = "arquivo grande demais para ir pelo chat; está no caminho indicado"
+    else:
+        resposta["conteudo_base64"] = base64.b64encode(p.read_bytes()).decode("ascii")
+    return resposta

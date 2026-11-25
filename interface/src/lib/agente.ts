@@ -56,7 +56,13 @@ Regras da empresa:
 - AK = canal Presencial; JGK = Remoto + Remoto_Brasil.
 - Nunca inclua Gustavo Kruger nem Mariana Freire como destinatários de e-mail ou mensagem, mesmo quando forem coordenadores.
 - Arquivos: entregue com buscar_arquivo; CPF e nascimento só saem se o Mateus pedir explicitamente.
-- Scripts: só os de listar_scripts. Os de nível 3 abrem uma janela de aval para o Mateus; se ele recusar, não insista.`;
+- Scripts: só os de listar_scripts. Os de nível 3 abrem uma janela de aval para o Mateus; se ele recusar, não insista.
+- Relatório Diário (skill diaria-relatorio-ak): rode rodar_script("relatorio_diario") (uns 20 s). A saída é um JSON:
+  - ok=true: chame entregar_gerado com o "arquivo" e resuma: mês e horário de corte, pontos digitados e reais, atuando, órfãs incluídas, que todos os supervisores bateram com o portal, e a lista do que ficou fora (com pontos), perguntando se deve incluir em alguma equipe. Lembre que as dinâmicas atualizam ao abrir no Excel.
+  - ok=false com "problemas": o arquivo saiu com "CONFERIR" no nome. NÃO diga que está pronto; mostre os problemas (supervisor × portal) e sugira a causa provável (troca de equipe na Usuarios_Atual, por exemplo). Só entregue se o Mateus pedir mesmo assim.
+- Parcial Consolidada (skill parcial-consolidada-ak-v2): precisa da lista Fora do mês (um .xlsx em Downloads ou Documents com as colunas CNPJ e "Não Pode"). Se o Mateus não disse o caminho, PEÇA antes de rodar. Rode rodar_script("parcial_consolidada", {"--fora": "<caminho>"}) (uns 20 s; "--mes": "AAAA-MM" só se ele pedir outro mês).
+  - ok=true: entregar_gerado com o "arquivo" e resuma: arquivos usados (DataRef dos usuários), mês e corte, total de linhas, por status e por projeto, CNPJs excluídos pela lista Fora, pessoas vindas do arquivo de usuários antigo, duplicados, CNPJs vazios e CPFs não achados.
+  - "parar_e_pedir": repasse o pedido ao Mateus exatamente (ex.: baixar o FVE de novo sem abrir no Excel).`;
 }
 
 const corta = (s: string, n = 160) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
@@ -346,6 +352,19 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
         return { resultado: r, resumo: String(input.nome) };
       },
       ["nome"],
+    ),
+
+    ferramenta(
+      "entregar_gerado",
+      "Entrega ao Mateus (cartão com Baixar) um arquivo que um gerador acabou de criar, como o Relatório Diário ou a Parcial Consolidada. Use o \"arquivo\" do JSON devolvido pelo rodar_script.",
+      { caminho: { type: "string" } },
+      async (input, s) => {
+        const r = (await pc("entregar_gerado", { caminho: String(input.caminho) }, s)) as Anexo & { conteudo_base64?: string };
+        const { conteudo_base64, ...anexo } = r;
+        ev.aoReceberArquivo(anexo, conteudo_base64 ?? null);
+        return { resultado: anexo, resumo: anexo.nome_arquivo };
+      },
+      ["caminho"],
     ),
 
     ferramenta("listar_scripts", "Scripts liberados, com nível (1 leitura, 2 gera arquivo, 3 ação externa) e opções aceitas.", {}, async (_i, s) => {

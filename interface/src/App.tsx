@@ -1,5 +1,6 @@
 import {
   IconAlertOctagon,
+  IconFileSpreadsheet,
   IconCalendarTime,
   IconChartLine,
   IconFolder,
@@ -518,6 +519,11 @@ export default function App() {
       aoClicar: () => preencherCaixa("A base de hoje foi liberada?"),
     },
     { titulo: "Agendamentos", icone: <IconCalendarTime className="h-full w-full" stroke={1.6} />, aoClicar: () => abrirPainel() },
+    {
+      titulo: "Relatório Diário",
+      icone: <IconFileSpreadsheet className="h-full w-full" stroke={1.6} />,
+      aoClicar: () => preencherCaixa("Gere o Relatório Diário com a base de hoje."),
+    },
     {
       titulo: "Pontos críticos",
       icone: <IconAlertOctagon className="h-full w-full" stroke={1.6} />,

@@ -120,6 +120,15 @@ def buscar_arquivo(nome: str, filtros: dict | None = None, incluir_dados_pessoai
     return _limpo(arquivos.buscar(cfg, nome, filtros, incluir_dados_pessoais))
 
 
+@ferramenta(leitura=True)
+def entregar_gerado(caminho: str) -> dict:
+    """Entrega (botão Baixar) um arquivo que um gerador acabou de criar, como o Relatório Diário ou a Parcial.
+
+    Use o caminho "arquivo" que o rodar_script devolveu. Só aceita as pastas de saída dos geradores.
+    """
+    return _limpo(arquivos.entregar_gerado(cfg, caminho))
+
+
 # ---------- chamados ----------
 
 @ferramenta(leitura=True)
