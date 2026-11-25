@@ -21,8 +21,8 @@ Como responder:
 - Diga sempre a data e o arquivo de onde veio o número (ex.: "Parcial2 de 24/11").
 - Nunca invente número. Se nenhuma ferramenta traz o dado, diga que essa análise ainda não está disponível no agente.
 - Análises de zerados, projeção do mês, constância e destaques AINDA NÃO têm ferramenta: diga que estão em construção.
-- Outlook (SÓ LEITURA): buscar_emails, ler_email, agenda_outlook e buscar_pessoa. Você NÃO envia, não responde e não apaga e-mail; se pedirem, diga que o agente só lê o Outlook. Ao citar um e-mail, diga remetente, assunto e quando chegou. Para o conteúdo completo, use ler_email com a uri.
-- Agendamentos: listar_rotinas traz as rotinas cadastradas pelo Mateus (aba Agendamentos); tarefas_do_pc traz as tarefas AK do Agendador do Windows (última/próxima execução e se deu certo). Para criar ou mudar rotina, oriente o Mateus a usar a aba Agendamentos.
+- Outlook (SÓ LEITURA): buscar_emails (com uri lê o e-mail inteiro), agenda_outlook e buscar_pessoa. Você NÃO envia, não responde e não apaga e-mail; se pedirem, diga que o agente só lê o Outlook. Ao citar um e-mail, diga remetente, assunto e quando chegou. Para o conteúdo completo, use buscar_emails com a uri.
+- Agendamentos: a ferramenta agendamentos traz as rotinas cadastradas pelo Mateus (aba Agendamentos) e as tarefas AK do Agendador do Windows (última/próxima execução e se deu certo). Para criar ou mudar rotina, oriente o Mateus a usar a aba Agendamentos.
 - Pontos críticos: use pontos_criticos (filtre por coordenador ou supervisor quando o pedido for de uma equipe; sem filtro, nomes de experiência e alertas vêm só contados). A régua é a das skills (gatilhoak), absoluta: cada nível contra o seu gatilho, no ritmo do mês (gatilho × DU passados ÷ DU do mês). Crítico = abaixo de 50% do ritmo em Conta OU GET (precisa bater os dois); atenção = abaixo do ritmo.
   Responda nesta ordem, Presencial e Remoto separados, Coordenador → Supervisor → Consultor:
   1. Uma linha: base_ate, DU passados/DU do mês e o resumo (equipes críticas/atenção, consultores críticos/atenção/no ritmo, quantos em experiência fora da régua).
@@ -55,13 +55,13 @@ Regras da empresa:
   - Concluídos trazem resposta_final do Santander: parecer, causa_raiz, status_proposta, procedente (Sim/Não) e sla_atuacao. Ao listar concluídos, mostre o parecer resumido em uma linha, a causa raiz e se foi procedente. Se resposta_final vier vazia, diga "sem resposta registrada".
 - AK = canal Presencial; JGK = Remoto + Remoto_Brasil.
 - Nunca inclua Gustavo Kruger nem Mariana Freire como destinatários de e-mail ou mensagem, mesmo quando forem coordenadores.
-- Arquivos: entregue com buscar_arquivo; CPF e nascimento só saem se o Mateus pedir explicitamente.
-- Scripts: só os de listar_scripts. Os de nível 3 abrem uma janela de aval para o Mateus; se ele recusar, não insista.
+- Arquivos: buscar_arquivo sem nome lista; com nome entrega a cópia; CPF e nascimento só saem se o Mateus pedir explicitamente.
+- Scripts: só os da lista (rodar_script sem nome devolve a lista). Os de nível 3 abrem uma janela de aval para o Mateus; se ele recusar, não insista.
 - Relatório Diário (skill diaria-relatorio-ak): rode rodar_script("relatorio_diario") (uns 20 s). A saída é um JSON:
-  - ok=true: chame entregar_gerado com o "arquivo" e resuma: mês e horário de corte, pontos digitados e reais, atuando, órfãs incluídas, que todos os supervisores bateram com o portal, e a lista do que ficou fora (com pontos), perguntando se deve incluir em alguma equipe. Lembre que as dinâmicas atualizam ao abrir no Excel.
+  - ok=true: chame buscar_arquivo com caminho = o "arquivo" e resuma: mês e horário de corte, pontos digitados e reais, atuando, órfãs incluídas, que todos os supervisores bateram com o portal, e a lista do que ficou fora (com pontos), perguntando se deve incluir em alguma equipe. Lembre que as dinâmicas atualizam ao abrir no Excel.
   - ok=false com "problemas": o arquivo saiu com "CONFERIR" no nome. NÃO diga que está pronto; mostre os problemas (supervisor × portal) e sugira a causa provável (troca de equipe na Usuarios_Atual, por exemplo). Só entregue se o Mateus pedir mesmo assim.
 - Parcial Consolidada (skill parcial-consolidada-ak-v2): precisa da lista Fora do mês (um .xlsx em Downloads ou Documents com as colunas CNPJ e "Não Pode"). Se o Mateus não disse o caminho, PEÇA antes de rodar. Rode rodar_script("parcial_consolidada", {"--fora": "<caminho>"}) (uns 20 s; "--mes": "AAAA-MM" só se ele pedir outro mês).
-  - ok=true: entregar_gerado com o "arquivo" e resuma: arquivos usados (DataRef dos usuários), mês e corte, total de linhas, por status e por projeto, CNPJs excluídos pela lista Fora, pessoas vindas do arquivo de usuários antigo, duplicados, CNPJs vazios e CPFs não achados.
+  - ok=true: buscar_arquivo com caminho = o "arquivo" e resuma: arquivos usados (DataRef dos usuários), mês e corte, total de linhas, por status e por projeto, CNPJs excluídos pela lista Fora, pessoas vindas do arquivo de usuários antigo, duplicados, CNPJs vazios e CPFs não achados.
   - "parar_e_pedir": repasse o pedido ao Mateus exatamente (ex.: baixar o FVE de novo sem abrir no Excel).`;
 }
 
@@ -150,22 +150,59 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
     }
   };
 
+  // Ordem = prioridade: se o app limitar a quantidade de ferramentas, as do fim é que ficam de fora.
   return [
     ferramenta("status_base", "Diz se a base do dia foi validada e liberada, com o aviso a mostrar se não foi. Chame antes de dar números.", {}, async (_i, s) => {
       const r = (await pc("status_base", {}, s)) as { liberada: boolean; laudo: { data: string } };
       return { resultado: r, resumo: r.liberada ? `base de ${r.laudo?.data} liberada` : "base não liberada" };
     }),
 
-    ferramenta("listar_arquivos", "Lista os arquivos do RPA que podem ser entregues (nome, descrição, data, tamanho).", {}, async (_i, s) => {
-      const r = comoLista(await pc("listar_arquivos", {}, s));
-      return { resultado: r, resumo: `${r.length} arquivos disponíveis` };
-    }),
+    ferramenta(
+      "rodar_script",
+      "Roda um script da lista liberada no PC (Relatório Diário, Parcial, consulta de chamados no portal, validador...). SEM nome: devolve a lista de scripts, com nível (1 leitura, 2 gera arquivo, 3 ação externa) e opções aceitas. opcoes: só as aceitas pelo script, ex.: {\"--dias\": \"2\"}. Nível 3 abre a janela de aval do Mateus antes.",
+      { nome: { type: "string" }, opcoes: { type: "object" } },
+      async (input, s) => {
+        if (!input.nome) {
+          const lista = comoLista(await pc("listar_scripts", {}, s));
+          return { resultado: lista, resumo: `${lista.length} scripts na lista` };
+        }
+        const nome = String(input.nome);
+        const opcoes = (input.opcoes as Record<string, unknown>) ?? {};
+        const etapas = ["Conferindo a lista liberada", `Rodando ${nome} no PC`, "Lendo o resultado"];
+        ev.aoRodarScript({ etapas, atual: 0 });
+        try {
+          let r = (await pc("rodar_script", { nome, opcoes }, s)) as {
+            executado: boolean;
+            precisa_aval?: boolean;
+            comando?: string[];
+            ok?: boolean;
+            duracao_s?: number;
+          };
+          if (r.precisa_aval) {
+            const lista = comoLista<{ nome: string; descricao: string }>(await pc("listar_scripts", {}, s));
+            const aprovado = await ev.pedirAval({
+              script: nome,
+              descricao: lista.find((x) => x.nome === nome)?.descricao ?? "",
+              comando: r.comando ?? [],
+            });
+            if (!aprovado) return { resultado: "O Mateus recusou o aval. Nada foi executado.", resumo: "aval recusado" };
+            ev.aoRodarScript({ etapas, atual: 1 });
+            r = (await pc("rodar_script", { nome, opcoes, confirmado: true }, s)) as typeof r;
+          } else ev.aoRodarScript({ etapas, atual: 1 });
+          ev.aoRodarScript({ etapas, atual: 2 });
+          return { resultado: r, resumo: r.ok ? `${nome} ok em ${r.duracao_s}s` : `${nome} terminou com erro` };
+        } finally {
+          ev.aoRodarScript(null);
+        }
+      },
+    ),
 
     ferramenta(
       "buscar_arquivo",
-      "Entrega ao Mateus uma cópia de um arquivo do RPA (nome de listar_arquivos), inteira ou recortada por filtros. Devolve só os dados da cópia; o cartão com o botão Baixar aparece na conversa.",
+      "Arquivos para o Mateus baixar (cartão com Baixar). SEM nome nem caminho: lista os arquivos do RPA disponíveis. Com nome (ex.: usuarios_atual): cópia do arquivo do RPA, inteira ou recortada por filtros. Com caminho: entrega um arquivo que um gerador acabou de criar (o \"arquivo\" do JSON do rodar_script, como o Relatório Diário ou a Parcial).",
       {
-        nome: { type: "string", description: "nome do arquivo em listar_arquivos, ex.: usuarios_atual" },
+        nome: { type: "string", description: "nome do arquivo do RPA, ex.: usuarios_atual" },
+        caminho: { type: "string", description: "caminho do arquivo gerado (Relatório Diário, Parcial)" },
         filtros: {
           type: "object",
           description: 'opcional: {"Coluna": "texto contido"} ou {"Coluna": ["valor exato"]}',
@@ -173,12 +210,53 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
         incluir_dados_pessoais: { type: "boolean", description: "só true se o Mateus pedir CPF/nascimento" },
       },
       async (input, s) => {
-        const r = (await pc("buscar_arquivo", input, s)) as Anexo & { conteudo_base64?: string };
+        if (!input.nome && !input.caminho) {
+          const lista = comoLista(await pc("listar_arquivos", {}, s));
+          return { resultado: lista, resumo: `${lista.length} arquivos disponíveis` };
+        }
+        const r = (
+          input.caminho
+            ? await pc("entregar_gerado", { caminho: String(input.caminho) }, s)
+            : await pc("buscar_arquivo", { nome: input.nome, filtros: input.filtros, incluir_dados_pessoais: input.incluir_dados_pessoais }, s)
+        ) as Anexo & { conteudo_base64?: string };
         const { conteudo_base64, ...anexo } = r;
         ev.aoReceberArquivo(anexo, conteudo_base64 ?? null);
         return { resultado: anexo, resumo: `${anexo.nome_arquivo}${anexo.linhas != null ? ` · ${anexo.linhas} linhas` : ""}` };
       },
-      ["nome"],
+    ),
+
+    ferramenta(
+      "consultar_chamados_portal",
+      "Chamados Conta PJ do portal Process & Operations pela última consulta do RPA: em aberto + concluídos no período, com a resposta final do Santander nos concluídos (parecer, causa raiz, status da proposta, procedente). desde/ate (AAAA-MM-DD) filtram pela data de conclusão; status 'aberto' ou 'concluido'; cnpj opcional. Se a consulta guardada não cobre o período, volta precisa_rodar=true com dias_sugeridos.",
+      {
+        desde: { type: "string", description: "AAAA-MM-DD" },
+        ate: { type: "string", description: "AAAA-MM-DD" },
+        cnpj: { type: "string" },
+        status: { type: "string", enum: ["aberto", "concluido"] },
+      },
+      async (input, s) => {
+        const r = (await pc("consultar_chamados_portal", input, s)) as {
+          precisa_rodar: boolean;
+          dias_sugeridos?: number;
+          totais?: { em_aberto: number; concluidos: number; concluidos_com_resposta?: number };
+        };
+        return {
+          resultado: r,
+          resumo: r.precisa_rodar
+            ? `precisa consultar o portal (--dias ${r.dias_sugeridos})`
+            : `${r.totais?.em_aberto ?? 0} em aberto, ${r.totais?.concluidos ?? 0} concluídos (${r.totais?.concluidos_com_resposta ?? 0} com resposta)`,
+        };
+      },
+    ),
+
+    ferramenta(
+      "contas_fora_do_sla",
+      "Propostas pendentes há mais de 3 dias úteis desde a digitação, marcando quais já têm chamado do robô. Filtros opcionais por parte do nome.",
+      { supervisor: { type: "string" }, coordenador: { type: "string" } },
+      async (input, s) => {
+        const r = (await pc("contas_fora_do_sla", input, s)) as { total: number; sem_chamado_rpa: number };
+        return { resultado: r, resumo: `${r.total} contas fora do SLA, ${r.sem_chamado_rpa} sem chamado do robô` };
+      },
     ),
 
     ferramenta(
@@ -190,16 +268,6 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
         return { resultado: r, resumo: `${r.propostas_parcial2.length} proposta(s), ${r.chamados_rpa.length} chamado(s) do robô` };
       },
       ["cnpj"],
-    ),
-
-    ferramenta(
-      "contas_fora_do_sla",
-      "Propostas pendentes há mais de 3 dias úteis desde a digitação, marcando quais já têm chamado do robô. Filtros opcionais por parte do nome.",
-      { supervisor: { type: "string" }, coordenador: { type: "string" } },
-      async (input, s) => {
-        const r = (await pc("contas_fora_do_sla", input, s)) as { total: number; sem_chamado_rpa: number };
-        return { resultado: r, resumo: `${r.total} contas fora do SLA, ${r.sem_chamado_rpa} sem chamado do robô` };
-      },
     ),
 
     ferramenta(
@@ -232,30 +300,6 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
     ),
 
     ferramenta(
-      "consultar_chamados_portal",
-      "Chamados Conta PJ do portal Process & Operations pela última consulta do RPA: em aberto + concluídos no período, com a resposta final do Santander nos concluídos (parecer, causa raiz, status da proposta, procedente). desde/ate (AAAA-MM-DD) filtram pela data de conclusão; status 'aberto' ou 'concluido'; cnpj opcional. Se a consulta guardada não cobre o período, volta precisa_rodar=true com dias_sugeridos.",
-      {
-        desde: { type: "string", description: "AAAA-MM-DD" },
-        ate: { type: "string", description: "AAAA-MM-DD" },
-        cnpj: { type: "string" },
-        status: { type: "string", enum: ["aberto", "concluido"] },
-      },
-      async (input, s) => {
-        const r = (await pc("consultar_chamados_portal", input, s)) as {
-          precisa_rodar: boolean;
-          dias_sugeridos?: number;
-          totais?: { em_aberto: number; concluidos: number; concluidos_com_resposta?: number };
-        };
-        return {
-          resultado: r,
-          resumo: r.precisa_rodar
-            ? `precisa consultar o portal (--dias ${r.dias_sugeridos})`
-            : `${r.totais?.em_aberto ?? 0} em aberto, ${r.totais?.concluidos ?? 0} concluídos (${r.totais?.concluidos_com_resposta ?? 0} com resposta)`,
-        };
-      },
-    ),
-
-    ferramenta(
       "pontos_criticos",
       "Pontos críticos da produção do mês pela régua do gatilho (skills): consultores, equipes e coordenações contra o ritmo do próprio gatilho até hoje, mais alertas de integridade. Filtros opcionais por parte do nome do coordenador ou do supervisor.",
       { coordenador: { type: "string" }, supervisor: { type: "string" } },
@@ -271,9 +315,40 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
     ),
 
     ferramenta(
+      "ler_skill",
+      "Skills da AK (regras de negócio). SEM nome: lista as skills e quando usar cada uma. Com nome: o texto completo (contextoak, producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak, textos-comparativo-fve, diaria-relatorio-ak, parcial-consolidada-ak-v2).",
+      { nome: { type: "string" } },
+      async (input, s) => {
+        if (!input.nome) {
+          const lista = comoLista<{ nome: string }>(await pc("listar_skills", {}, s));
+          return { resultado: lista, resumo: `${lista.length} skills` };
+        }
+        const r = await pc("ler_skill", { nome: String(input.nome) }, s);
+        return { resultado: r, resumo: String(input.nome) };
+      },
+    ),
+
+    ferramenta(
+      "agendamentos",
+      "Rotinas da aba Agendamentos (nome, dias, hora, pedido, ativa, última execução) e as tarefas AK do Agendador do Windows (última e próxima execução e se deu certo).",
+      {},
+      async (_i, s) => {
+        const [rotinas, tarefas] = await Promise.all([
+          pc("listar_rotinas", {}, s).then((r) => comoLista(r)),
+          pc("tarefas_do_pc", {}, s).then((r) => comoLista<{ ok: boolean }>(r)),
+        ]);
+        return {
+          resultado: { rotinas, tarefas_do_pc: tarefas },
+          resumo: `${rotinas.length} rotina(s), ${tarefas.length} tarefa(s) no PC, ${tarefas.filter((t) => !t.ok).length} com erro`,
+        };
+      },
+    ),
+
+    ferramenta(
       "buscar_emails",
-      "Busca e-mails no Outlook do Mateus (só leitura). Filtros: query (texto no assunto/corpo/anexo), sender (e-mail ou nome completo), afterDateTime/beforeDateTime (ISO ou 'yesterday', 'today'), folderName. Sem filtros, traz os mais recentes da caixa de entrada.",
+      "Outlook do Mateus (só leitura). Com uri (mail:///...): o e-mail completo. Sem uri: busca por query (texto no assunto/corpo/anexo), sender (e-mail ou nome completo), afterDateTime/beforeDateTime (ISO ou 'yesterday', 'today'), folderName; sem filtros, os mais recentes da caixa de entrada.",
       {
+        uri: { type: "string" },
         query: { type: "string" },
         sender: { type: "string" },
         afterDateTime: { type: "string" },
@@ -281,24 +356,17 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
         folderName: { type: "string" },
       },
       async (input, s) => {
+        if (input.uri) {
+          const t = await lerEmail(mcp as Mcp, String(input.uri), s).catch((e) => {
+            throw new Error(`Outlook: ${mensagemErro(e)}`);
+          });
+          return { resultado: t, resumo: "e-mail lido" };
+        }
         const r = await buscarEmails(mcp as Mcp, input, s).catch((e) => {
           throw new Error(`Outlook: ${mensagemErro(e)}`);
         });
         return { resultado: r, resumo: `${r.length} e-mail(s)` };
       },
-    ),
-
-    ferramenta(
-      "ler_email",
-      "Lê o conteúdo completo de um e-mail pela uri (mail:///...) vinda de buscar_emails.",
-      { uri: { type: "string" } },
-      async (input, s) => {
-        const t = await lerEmail(mcp as Mcp, String(input.uri), s).catch((e) => {
-          throw new Error(`Outlook: ${mensagemErro(e)}`);
-        });
-        return { resultado: t, resumo: "e-mail lido" };
-      },
-      ["uri"],
     ),
 
     ferramenta(
@@ -326,98 +394,6 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
         return { resultado: r, resumo: `${r.length} pessoa(s)` };
       },
       ["nome"],
-    ),
-
-    ferramenta("listar_rotinas", "Rotinas da aba Agendamentos: nome, dias, hora, pedido, ativa e última execução.", {}, async (_i, s) => {
-      const r = comoLista(await pc("listar_rotinas", {}, s));
-      return { resultado: r, resumo: `${r.length} rotina(s)` };
-    }),
-
-    ferramenta("tarefas_do_pc", "Tarefas AK do Agendador do Windows: última e próxima execução e se o último resultado foi ok.", {}, async (_i, s) => {
-      const r = comoLista<{ ok: boolean }>(await pc("tarefas_do_pc", {}, s));
-      return { resultado: r, resumo: `${r.length} tarefa(s), ${r.filter((t) => !t.ok).length} com erro` };
-    }),
-
-    ferramenta("listar_skills", "Skills da AK (regras de negócio) disponíveis e quando usar cada uma.", {}, async (_i, s) => {
-      const r = comoLista<{ nome: string }>(await pc("listar_skills", {}, s));
-      return { resultado: r, resumo: `${r.length} skills` };
-    }),
-
-    ferramenta(
-      "ler_skill",
-      "Texto completo de uma skill da AK: contextoak, producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak, textos-comparativo-fve, diaria-relatorio-ak, parcial-consolidada-ak-v2.",
-      { nome: { type: "string", enum: ["contextoak", "producaoak", "usuariosak", "cruzamentodiariaak", "gatilhoak", "fveak", "textos-comparativo-fve", "diaria-relatorio-ak", "parcial-consolidada-ak-v2"] } },
-      async (input, s) => {
-        const r = await pc("ler_skill", { nome: String(input.nome) }, s);
-        return { resultado: r, resumo: String(input.nome) };
-      },
-      ["nome"],
-    ),
-
-    ferramenta(
-      "entregar_gerado",
-      "Entrega ao Mateus (cartão com Baixar) um arquivo que um gerador acabou de criar, como o Relatório Diário ou a Parcial Consolidada. Use o \"arquivo\" do JSON devolvido pelo rodar_script.",
-      { caminho: { type: "string" } },
-      async (input, s) => {
-        const r = (await pc("entregar_gerado", { caminho: String(input.caminho) }, s)) as Anexo & { conteudo_base64?: string };
-        const { conteudo_base64, ...anexo } = r;
-        ev.aoReceberArquivo(anexo, conteudo_base64 ?? null);
-        return { resultado: anexo, resumo: anexo.nome_arquivo };
-      },
-      ["caminho"],
-    ),
-
-    ferramenta("listar_scripts", "Scripts liberados, com nível (1 leitura, 2 gera arquivo, 3 ação externa) e opções aceitas.", {}, async (_i, s) => {
-      const r = comoLista(await pc("listar_scripts", {}, s));
-      return { resultado: r, resumo: `${r.length} scripts na lista` };
-    }),
-
-    ferramenta(
-      "rodar_script",
-      "Roda um script da lista liberada no PC. opcoes: só as aceitas pelo script, ex.: {\"--cnpj\": \"01694030000108\"}. Nível 3 abre a janela de aval do Mateus antes.",
-      { nome: { type: "string" }, opcoes: { type: "object" } },
-      async (input, s) => {
-        const nome = String(input.nome);
-        const opcoes = (input.opcoes as Record<string, unknown>) ?? {};
-        const etapas = ["Conferindo a lista liberada", `Rodando ${nome} no PC`, "Lendo o resultado"];
-        ev.aoRodarScript({ etapas, atual: 0 });
-        try {
-          let r = (await pc("rodar_script", { nome, opcoes }, s)) as {
-            executado: boolean;
-            precisa_aval?: boolean;
-            comando?: string[];
-            ok?: boolean;
-            duracao_s?: number;
-          };
-          if (r.precisa_aval) {
-            const lista = comoLista<{ nome: string; descricao: string }>(await pc("listar_scripts", {}, s));
-            const aprovado = await ev.pedirAval({
-              script: nome,
-              descricao: lista.find((x) => x.nome === nome)?.descricao ?? "",
-              comando: r.comando ?? [],
-            });
-            if (!aprovado) return { resultado: "O Mateus recusou o aval. Nada foi executado.", resumo: "aval recusado" };
-            ev.aoRodarScript({ etapas, atual: 1 });
-            r = (await pc("rodar_script", { nome, opcoes, confirmado: true }, s)) as typeof r;
-          } else ev.aoRodarScript({ etapas, atual: 1 });
-          ev.aoRodarScript({ etapas, atual: 2 });
-          return { resultado: r, resumo: r.ok ? `${nome} ok em ${r.duracao_s}s` : `${nome} terminou com erro` };
-        } finally {
-          ev.aoRodarScript(null);
-        }
-      },
-      ["nome"],
-    ),
-
-    ferramenta(
-      "dias_uteis",
-      "Dias úteis depois de inicio até fim (AAAA-MM-DD), sem fins de semana e feriados.",
-      { inicio: { type: "string" }, fim: { type: "string" } },
-      async (input, s) => {
-        const r = await pc("dias_uteis", input, s);
-        return { resultado: r, resumo: `${r} dias úteis` };
-      },
-      ["inicio", "fim"],
     ),
   ];
 }
@@ -457,6 +433,9 @@ export async function responder(
     }
   };
 
+  const todas = ferramentas(mcp, ev);
+  const enviadas = todas.slice(0, limites?.tools?.maxCount ?? todas.length);
+  const cortadas = todas.slice(enviadas.length).map((t) => t.name);
   let resultado: { text: string; truncated: boolean };
   if (!ferramentasOk) {
     resultado = await semFerramentas(mcp ? "este app não aceita ferramentas" : "o PC não está conectado");
@@ -465,8 +444,13 @@ export async function responder(
       resultado = await sample(turnos, {
         signal,
         onText,
-        tools: ferramentas(mcp, ev).slice(0, limites?.tools?.maxCount ?? 32),
+        tools: enviadas,
       });
+      if (cortadas.length)
+        resultado = {
+          ...resultado,
+          text: `${resultado.text}\n\n_(O app limitou as ferramentas a ${enviadas.length}; ficaram de fora: ${cortadas.join(", ")}.)_`,
+        };
     } catch (e) {
       const c = codigoErro(e);
       if (c !== "tools_unavailable" && c !== "invalid_request" && c !== "capability_removed") throw e;

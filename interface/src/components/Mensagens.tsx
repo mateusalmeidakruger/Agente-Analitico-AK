@@ -22,6 +22,7 @@ const NOMES: Record<string, string> = {
   listar_rotinas: "Leu as rotinas",
   tarefas_do_pc: "Conferiu o Agendador do PC",
   listar_skills: "Listou as skills",
+  agendamentos: "Conferiu os agendamentos",
   entregar_gerado: "Preparou o arquivo gerado",
   ler_skill: "Consultou a skill",
   listar_scripts: "Listou os scripts",
