@@ -21,6 +21,8 @@ const NOMES: Record<string, string> = {
   buscar_pessoa: "Buscou no diretório",
   listar_rotinas: "Leu as rotinas",
   tarefas_do_pc: "Conferiu o Agendador do PC",
+  listar_skills: "Listou as skills",
+  ler_skill: "Consultou a skill",
   listar_scripts: "Listou os scripts",
   rodar_script: "Rodou o script",
   dias_uteis: "Contou os dias úteis",

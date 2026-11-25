@@ -19,6 +19,7 @@ Fica em `servidor\`. O Artifact do chat (app desktop do Claude) chama estas ferr
 | `pontos_criticos` | Produção do mês por equipe: consultor crítico < 50% da mediana do grupo (ativos com mais de 45 dias); equipe crítica = pontos por ativo < 70% da média da coordenação ou 30%+ de críticos |
 | `listar_rotinas`, `salvar_rotina`, `apagar_rotina`, `marcar_rotina_executada` | Rotinas da aba Agendamentos em `dadosgendamentos.json` (dias, hora, pedido ao agente); avisam no sino com o agente aberto |
 | `tarefas_do_pc` | Tarefas AK do Agendador do Windows (só leitura, `schtasks /query`) |
+| `listar_skills`, `ler_skill` | Skills da AK em `conhecimento\` (contextoak, producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak, textos-comparativo-fve); o agente lê a skill certa antes de cada análise |
 | `listar_scripts`, `rodar_script` | Só o que está em `scripts.json`; nível 3 exige `confirmado=true` e começa desabilitado |
 
 A planilha ABERTURA DE CHAMADOS e o Outlook (e-mails, agenda, diretório) não passam pelo servidor: o Artifact lê pelo conector Microsoft 365, que só tem permissão de leitura.

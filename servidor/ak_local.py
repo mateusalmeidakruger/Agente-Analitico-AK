@@ -12,7 +12,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
-from nucleo import analises, arquivos, base_do_dia, chamados, conversas, rotinas, scripts
+from nucleo import analises, arquivos, base_do_dia, chamados, conhecimento, conversas, rotinas, scripts
 from nucleo.config import Config
 from nucleo.erros import ErroAgente
 
@@ -190,6 +190,20 @@ def marcar_rotina_executada(id: str) -> dict:
 def tarefas_do_pc() -> dict:
     """Tarefas AK do Agendador do Windows: última e próxima execução e se o último resultado foi ok."""
     return {"itens": rotinas.tarefas_do_pc()}
+
+
+# ---------- conhecimento (skills da AK) ----------
+
+@ferramenta(leitura=True)
+def listar_skills() -> dict:
+    """Skills da AK disponíveis (regras de negócio): nome e quando usar cada uma."""
+    return {"itens": conhecimento.listar()}
+
+
+@ferramenta(leitura=True)
+def ler_skill(nome: str) -> str:
+    """Texto completo de uma skill da AK (contextoak, producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak, textos-comparativo-fve)."""
+    return conhecimento.ler(nome)
 
 
 # ---------- scripts ----------

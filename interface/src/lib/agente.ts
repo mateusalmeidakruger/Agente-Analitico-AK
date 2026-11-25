@@ -28,7 +28,21 @@ Como responder:
   2. Tabela das equipes críticas: supervisor, coordenador, ativos, pontos por ativo × média da coordenação, críticos/elegíveis (%), e qual sinal disparou (pontos por ativo, % de críticos ou os dois).
   3. Por equipe crítica, os consultores críticos com pontos (conta + GET) e dias de casa.
   Equipe com vaga_sem_supervisor=true é vaga (TBA), não supervisor: diga isso. Entrantes e afastados ficam fora da regra; cite só os totais, a não ser que peçam.
+  Atenção: esta análise usa régua RELATIVA (mediana do grupo e média da coordenação), escolhida pelo Mateus em 24/11, diferente da régua absoluta da contextoak (gatilho e projeção). Diga isso em uma linha ao apresentar.
   A régua: consultor crítico = pontos M0/M1 do mês abaixo de 50% da mediana do grupo (Presencial, Remoto, Remoto_Brasil), só com mais de 45 dias de casa; equipe crítica = pontos por ativo abaixo de 70% da média da coordenação OU 30%+ de críticos.
+
+Conhecimento da AK (skills): a fonte oficial das regras de negócio são as skills. Antes de analisar ou explicar Produção, Usuários, cruzamento, gatilho ou FVE, chame ler_skill com a skill certa (producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak; contextoak para vocabulário e postura; textos-comparativo-fve para os e-mails do Comparativo FVE). Não chame de novo uma skill que já leu nesta resposta. Princípios que valem sempre (contextoak):
+1. Presencial e Remoto sempre separados, salvo pedido explícito.
+2. Hierarquia sempre Coordenador → Supervisor → Consultor.
+3. M0/M1 (CONTA_CORRENTE_PJ, CREDENCIAMENTO) e M2 (…_M2) sempre separados; nunca somar.
+4. Conta e GET sempre distintos; taxas de natureza diferente.
+5. Nome, supervisor, coordenador e status vêm da Usuarios_Atual (cruzar pela Matricula), nunca da Produção — exceto matrícula órfã.
+6. Mês de qualquer análise = DataBase. Comparativo de eventos: contas abertas por DataAberturaConta, credenciamentos por DataCredenciamento.
+7. Experiência = menos de 90 dias corridos de casa; aparece sinalizada, nunca escondida.
+8. Alertas de integridade (produção de desligado, matrícula órfã, lançamento em licença) são primeira classe.
+9. Pontos é a métrica-rainha; somar Pontos sem filtrar Status. Sempre absoluto junto de percentual.
+10. Conhece o gap temporal: pendente recente pode já ter ativado no banco.
+Vocabulário: consultor = executivo = promotor; Conta = CONTA_CORRENTE_PJ; GET = CREDENCIAMENTO (GetNet).
 
 Regras da empresa:
 - SLA: proposta pendente (Aguardando Liberação ou Em Análise) há mais de 3 dias úteis desde a digitação já pode ter chamado. Status CANCELADO não conta.
@@ -316,6 +330,22 @@ function ferramentas(mcp: Mcp | null, ev: Eventos): FerramentaPagina[] {
       const r = comoLista<{ ok: boolean }>(await pc("tarefas_do_pc", {}, s));
       return { resultado: r, resumo: `${r.length} tarefa(s), ${r.filter((t) => !t.ok).length} com erro` };
     }),
+
+    ferramenta("listar_skills", "Skills da AK (regras de negócio) disponíveis e quando usar cada uma.", {}, async (_i, s) => {
+      const r = comoLista<{ nome: string }>(await pc("listar_skills", {}, s));
+      return { resultado: r, resumo: `${r.length} skills` };
+    }),
+
+    ferramenta(
+      "ler_skill",
+      "Texto completo de uma skill da AK: contextoak, producaoak, usuariosak, cruzamentodiariaak, gatilhoak, fveak, textos-comparativo-fve.",
+      { nome: { type: "string", enum: ["contextoak", "producaoak", "usuariosak", "cruzamentodiariaak", "gatilhoak", "fveak", "textos-comparativo-fve"] } },
+      async (input, s) => {
+        const r = await pc("ler_skill", { nome: String(input.nome) }, s);
+        return { resultado: r, resumo: String(input.nome) };
+      },
+      ["nome"],
+    ),
 
     ferramenta("listar_scripts", "Scripts liberados, com nível (1 leitura, 2 gera arquivo, 3 ação externa) e opções aceitas.", {}, async (_i, s) => {
       const r = comoLista(await pc("listar_scripts", {}, s));

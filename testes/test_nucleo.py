@@ -334,3 +334,18 @@ def test_tarefas_do_pc_le_o_agendador():
     tarefas = rotinas.tarefas_do_pc()
     assert isinstance(tarefas, list)
     assert all(t["nome"].startswith("AK") for t in tarefas)
+
+
+# ---------- conhecimento ----------
+
+from nucleo import conhecimento  # noqa: E402
+
+
+def test_skills_listadas_com_descricao_e_leitura():
+    itens = {i["nome"]: i["descricao"] for i in conhecimento.listar()}
+    assert {"contextoak", "producaoak", "usuariosak", "gatilhoak", "fveak"} <= set(itens)
+    assert "Almeida Kruger" in itens["contextoak"]
+    texto = conhecimento.ler("gatilhoak")
+    assert "Plano de Ação" in texto and len(texto) < 28_000
+    with pytest.raises(conhecimento.ErroAgente):
+        conhecimento.ler("../config")
