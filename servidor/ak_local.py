@@ -97,7 +97,7 @@ def salvar_conversa(conversa: dict) -> str:
 
 @ferramenta(leitura=False)
 def apagar_conversa(id: str) -> str:
-    """Move a conversa para dados\excluidos no PC (dá para recuperar). Só quando o Mateus pedir."""
+    """Move a conversa para a pasta de excluídos no PC (dá para recuperar). Só quando o Mateus pedir."""
     return conversas.apagar(cfg, id)
 
 

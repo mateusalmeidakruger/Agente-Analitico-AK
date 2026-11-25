@@ -463,3 +463,18 @@ def test_disparo_retorno_regras_de_destinatario_e_texto():
     assert d.motivo({"titulo": "Conta excedeu o SLA", "descricao": "está em aguardando liberação desde 12/11"}) == "Aguardando liberação"
     _, _, comando = scripts.montar_comando(Config(), "disparo_retorno", {"--chamados": "2295,2319"})
     assert comando[-2:] == ["--chamados", "2295,2319"]
+
+
+def test_scripts_json_relido_sem_reiniciar(tmp_path, monkeypatch):
+    from nucleo import config as cfgmod
+    pasta = tmp_path / "servidor"
+    pasta.mkdir()
+    (pasta / "config.json").write_text(json.dumps({"raiz_fluxo": str(tmp_path), "arquivos": {}}), encoding="utf-8")
+    (pasta / "scripts.json").write_text(json.dumps({"scripts": {"x": {"habilitado": False}}}), encoding="utf-8")
+    monkeypatch.setattr(cfgmod, "SERVIDOR", pasta)
+    c = cfgmod.Config(dados=tmp_path / "dados")
+    assert c.scripts["x"]["habilitado"] is False
+    import os, time
+    (pasta / "scripts.json").write_text(json.dumps({"scripts": {"x": {"habilitado": True}}}), encoding="utf-8")
+    os.utime(pasta / "scripts.json", (time.time() + 5, time.time() + 5))
+    assert c.scripts["x"]["habilitado"] is True
