@@ -74,6 +74,7 @@ Rodam como scripts nível 2 do agente (`rodar_script`), e também direto pelo te
 | Gerador | Skill | O que faz |
 | --- | --- | --- |
 | `relatorio_diario.py` | diaria-relatorio-ak | Parte do último `Relatório Diário DD.MM.AAAA.xlsx` da pasta Claude outputs, edita o XML (sem recriar), roda as 4 validações da skill e grava ao lado, sem sobrescrever. Se algum supervisor não bater com o portal, sai com "CONFERIR" no nome e código 3. Conferido: refaz o de 23/11 idêntico (416 linhas, Por Supervisor e Por Coordenador 100%) e abre no Excel. |
+| `disparo_retorno.py` | (disparos de 05/11 a 24/11) | Retorno dos chamados concluídos com resposta do Santander: um e-mail por supervisor + coordenador, cc Andressa, nunca Gustavo Kruger/Mariana Freire, pula os já disparados (`envio_*.json`). Gera o HTML com os links em `Disparo Retorno Chamados`; não envia nada. |
 | `parcial_consolidada.py` | parcial-consolidada-ak-v2 | Script validado da skill: Produção Conta PJ × FVE AK+JGK do mês, sem a lista Fora (`--fora`, obrigatória). Grava em `Downloads\Diária`. Para e pede quando falta arquivo ou o FVE veio em notação científica. |
 
 ```

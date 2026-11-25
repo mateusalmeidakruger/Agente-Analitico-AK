@@ -439,3 +439,27 @@ def test_relatorio_diario_renomeia_supervisao_sem_mexer_nos_totais(tmp_path, mon
     ps = pd.read_excel(r["arquivo"], sheet_name="Por Supervisor", engine="calamine", header=None)
     nomes = set(ps.iloc[:, 1].dropna().astype(str))
     assert "TBA LITORAL NORTE" in nomes and "EDER DE JESUS SANTOS" not in nomes
+
+
+def test_abrir_chamado_ligado_mas_so_com_aval_e_um_cnpj():
+    c = Config()
+    s, _, comando = scripts.montar_comando(c, "chamados_enviar", {"--cnpj": "01694030000108"})
+    assert s["nivel"] == 3 and s["habilitado"] and comando[-3:] == ["--enviar", "--cnpj", "01694030000108"]
+    with pytest.raises(scripts.ErroScript, match="exige --cnpj"):
+        scripts.montar_comando(c, "chamados_enviar")
+    with pytest.raises(scripts.ErroScript):
+        scripts.montar_comando(c, "chamados_enviar", {"--cnpj": "0169403000010"})
+
+
+def test_disparo_retorno_regras_de_destinatario_e_texto():
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "geradores"))
+    import disparo_retorno as d
+    assert d.email_valido("j.gustavokruger@almeidakruger.com.br") is None
+    assert d.email_valido("mariana.freire@almeidakruger.com.br") is None
+    assert d.email_valido("alguem@gmail.com") is None
+    assert d.email_valido("crislaine.araujo@outlook.com") == "crislaine.araujo@almeidakruger.com.br"
+    assert d.email_valido("ARAGON.ARAUJO@ALMEIDAKRUGER.COM.BR") == "aragon.araujo@almeidakruger.com.br"
+    assert d.retorno({"parecer": "Bom dia Não consta conta ,proposta expirada em 14/11 .Sem anexo ."}) ==         "Não consta conta, proposta expirada em 14/11. Sem anexo."
+    assert d.motivo({"titulo": "Conta excedeu o SLA", "descricao": "está em aguardando liberação desde 12/11"}) == "Aguardando liberação"
+    _, _, comando = scripts.montar_comando(Config(), "disparo_retorno", {"--chamados": "2295,2319"})
+    assert comando[-2:] == ["--chamados", "2295,2319"]

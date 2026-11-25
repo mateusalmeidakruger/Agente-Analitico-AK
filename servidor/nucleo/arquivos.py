@@ -11,6 +11,7 @@ from .erros import ErroAgente
 MIME = {
     ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ".csv": "text/csv",
+    ".html": "text/html",
 }
 
 
@@ -124,7 +125,7 @@ def entregar_gerado(cfg, caminho):
     p = Path(caminho).resolve()
     pastas = [Path(x).resolve() for x in cfg.bruto.get("pastas_entrega", [])]
     if p.suffix.lower() not in MIME or not any(p.is_relative_to(x) for x in pastas):
-        raise ErroArquivo("só entrego .xlsx/.csv das pastas de saída dos geradores: " + "; ".join(map(str, pastas)))
+        raise ErroArquivo("só entrego .xlsx/.csv/.html das pastas de saída dos geradores: " + "; ".join(map(str, pastas)))
     if not p.is_file():
         raise ErroArquivo(f"{p} não existe")
     tamanho = p.stat().st_size

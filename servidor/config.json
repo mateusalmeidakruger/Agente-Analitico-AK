@@ -4,7 +4,8 @@
   "limite_entrega_mb": 10,
   "pastas_entrega": [
     "C:\\Users\\mateus.ferreira\\Documents\\Relatório Diária Atualizado\\Comparativo\\Claude outputs",
-    "C:\\Users\\mateus.ferreira\\Downloads\\Diária"
+    "C:\\Users\\mateus.ferreira\\Downloads\\Diária",
+    "C:\\Users\\mateus.ferreira\\Documents\\Fluxo VBA Teste\\Disparo Retorno Chamados"
   ],
   "sla_dias_uteis": 3,
   "status_pendentes_sla": ["Aguardando Liberacao", "Em Analise"],

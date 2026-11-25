@@ -29,11 +29,11 @@
       }
     },
     "chamados_enviar": {
-      "descricao": "Abre de verdade o chamado de UM CNPJ no Process & Operations",
+      "descricao": "Abre de verdade o chamado de UM CNPJ no Process & Operations (só CNPJs das listas Contas Fora do SLA; pula quem já tem chamado). Leva uns 45 s e abre o navegador",
       "caminho": "RPA Chamados SLA\\rpa_chamados.py",
       "nivel": 3,
-      "habilitado": false,
-      "timeout_s": 600,
+      "habilitado": true,
+      "timeout_s": 240,
       "args_fixos": [
         "--enviar"
       ],
@@ -80,6 +80,18 @@
       "args_opcoes": {
         "--fora": "^C:\\\\Users\\\\mateus\\.ferreira\\\\(Downloads|Documents)\\\\[^<>|?*\"]+\\.xlsx$",
         "--mes": "^\\d{4}-(0[1-9]|1[0-2])$"
+      }
+    },
+    "disparo_retorno": {
+      "descricao": "Monta o disparo de retorno dos chamados concluídos com resposta do Santander (a partir da última consulta do portal): um e-mail por supervisor + coordenador, cc Andressa, nunca Gustavo Kruger nem Mariana Freire; pula os já disparados. Grava envio_<data>.json/.csv e abrir_emails_<data>.html em Disparo Retorno Chamados. NÃO envia nada",
+      "caminho": "{projeto}\\geradores\\disparo_retorno.py",
+      "nivel": 2,
+      "habilitado": true,
+      "timeout_s": 180,
+      "args_fixos": [],
+      "args_opcoes": {
+        "--chamados": "^\\d{4}(,\\d{4})*$",
+        "--desde": "^\\d{4}-\\d{2}-\\d{2}$"
       }
     }
   }
